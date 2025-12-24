@@ -1,5 +1,5 @@
 // ======================================================
-// LÓGICA DE LOGIN (E-MAIL OU CPF) - REDIRECIONAMENTO CORRIGIDO
+// LÓGICA DE LOGIN (E-MAIL, CPF OU CNPJ)
 // ======================================================
 
 const { createClient } = supabase;
@@ -11,7 +11,42 @@ const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
 // ELEMENTOS DO DOM
 const loginForm = document.getElementById('formLogin');
+const loginInput = document.getElementById('loginInput'); // Elemento do campo de texto
 const btnLogin = document.getElementById('btnLogin');
+
+// ======================================================
+// 0. MÁSCARA DE INPUT (CPF E CNPJ AUTOMÁTICO)
+// ======================================================
+if (loginInput) {
+    loginInput.addEventListener('input', function(e) {
+        let valor = e.target.value;
+        
+        // Se tiver "@", é email, então não fazemos nada
+        if (valor.includes('@')) return;
+
+        // Remove tudo que não é número
+        valor = valor.replace(/\D/g, "");
+
+        // Limita ao tamanho máximo de um CNPJ (14 números)
+        if (valor.length > 14) valor = valor.slice(0, 14);
+
+        // Aplica a máscara
+        if (valor.length <= 11) {
+            // CPF (000.000.000-00)
+            valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
+            valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
+            valor = valor.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+        } else {
+            // CNPJ (00.000.000/0000-00)
+            valor = valor.replace(/^(\d{2})(\d)/, "$1.$2");
+            valor = valor.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
+            valor = valor.replace(/\.(\d{3})(\d)/, ".$1/$2");
+            valor = valor.replace(/(\d{4})(\d)/, "$1-$2");
+        }
+
+        e.target.value = valor;
+    });
+}
 
 // ======================================================
 // 1. LÓGICA DE LOGIN INTELIGENTE
@@ -21,10 +56,10 @@ if (loginForm) {
         e.preventDefault();
 
         // Pega os valores
-        const loginValue = document.getElementById('loginInput').value.trim();
+        const rawLoginValue = document.getElementById('loginInput').value.trim();
         const password = document.getElementById('passwordInput').value;
         
-        let emailFinal = loginValue;
+        let emailFinal = rawLoginValue;
 
         // Feedback Visual (Botão Carregando)
         const originalText = btnLogin.innerHTML;
@@ -33,25 +68,39 @@ if (loginForm) {
         btnLogin.classList.add('opacity-80', 'cursor-not-allowed');
 
         try {
-            // --- PASSO A: DETECÇÃO DE CPF ---
-            // Se não tiver '@', assumimos que é CPF
-            if (!loginValue.includes('@')) {
-                const cleanCpf = loginValue.replace(/\D/g, ''); // Limpa pontos e traços
+            // --- PASSO A: DETECÇÃO DE DOCUMENTO (CPF ou CNPJ) ---
+            // Se não tiver '@', assumimos que é documento
+            if (!rawLoginValue.includes('@')) {
+                const cleanDoc = rawLoginValue.replace(/\D/g, ''); // Limpa pontos e traços
                 
-                if (cleanCpf.length === 0) {
-                    throw new Error("Por favor, digite um E-mail ou CPF válido.");
+                if (cleanDoc.length === 0) {
+                    throw new Error("Por favor, digite um E-mail, CPF ou CNPJ válido.");
                 }
 
-                // Busca o e-mail pelo CPF no banco
-                const { data: foundEmail, error: rpcError } = await supabaseClient
-                    .rpc('get_email_by_cpf', { target_cpf: cleanCpf });
+                let foundEmail = null;
+                let rpcError = null;
+
+                // DECISÃO: É CPF OU CNPJ?
+                if (cleanDoc.length === 11) {
+                    // --- É UM CPF ---
+                    const response = await supabaseClient.rpc('get_email_by_cpf', { target_cpf: cleanDoc });
+                    foundEmail = response.data;
+                    rpcError = response.error;
+                } else if (cleanDoc.length === 14) {
+                    // --- É UM CNPJ ---
+                    const response = await supabaseClient.rpc('get_email_by_cnpj', { target_cnpj: cleanDoc });
+                    foundEmail = response.data;
+                    rpcError = response.error;
+                } else {
+                    throw new Error("Documento inválido. Digite 11 números (CPF) ou 14 números (CNPJ).");
+                }
 
                 if (rpcError || !foundEmail) {
                     console.error("Erro RPC:", rpcError);
-                    throw new Error("CPF não encontrado no sistema.");
+                    throw new Error("Documento não encontrado no sistema.");
                 }
 
-                console.log("CPF Reconhecido. Logando com:", foundEmail);
+                console.log("Documento Reconhecido. Logando com:", foundEmail);
                 emailFinal = foundEmail;
             }
 
@@ -83,7 +132,6 @@ if (loginForm) {
                 showToast("Login realizado! Redirecionando...", "success");
                 
                 setTimeout(() => {
-                    // 👇 AQUI ESTÁ A MUDANÇA: Redireciona para repositorio_cliente.html 👇
                     if (profile.role === "admin") {
                         window.location.href = "admin.html";
                     } else {
