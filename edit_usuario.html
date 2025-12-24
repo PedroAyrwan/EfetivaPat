@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-BR">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Editar Usuário</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#136dec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101822",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                },
+            },
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark h-screen w-full flex text-slate-900 dark:text-white overflow-hidden">
+    
+    <main class="flex-1 flex flex-col h-full relative bg-background-light dark:bg-background-dark overflow-hidden">
+        <header class="h-16 flex-none border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 bg-white dark:bg-[#151f2b]">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <a href="admin.html" class="flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800" title="Voltar">
+                        <span class="material-symbols-outlined text-[24px]">arrow_back</span>
+                    </a>
+                    <h1 class="text-xl font-semibold text-slate-800 dark:text-white">Editar Usuário</h1>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 md:p-8">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-6 px-1">
+                    <a href="admin.html" class="hover:text-primary cursor-pointer transition-colors">Painel Admin</a>
+                    <span class="material-symbols-outlined text-[16px] text-slate-400">chevron_right</span>
+                    <span id="breadcrumbName" class="font-medium text-slate-900 dark:text-white">Carregando...</span>
+                </div>
+
+                <form id="editForm" class="bg-white dark:bg-[#1e293b] rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/60 overflow-hidden">
+                    <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Informações do Perfil</h2>
+                            <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Atualize os dados do usuário.</p>
+                        </div>
+                    </div>
+
+                    <div class="p-6 md:p-8">
+                        <div class="flex flex-col md:flex-row gap-8 md:gap-12">
+                            <div class="flex-none flex flex-col items-center">
+                                <div class="relative group cursor-pointer">
+                                    <div class="size-32 rounded-full overflow-hidden border-4 border-slate-50 dark:border-slate-800 shadow-sm bg-slate-100 dark:bg-slate-800 relative flex items-center justify-center text-4xl text-slate-300">
+                                        <span id="avatarInitials">--</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 flex flex-col gap-6 w-full">
+                                <input type="hidden" id="userId">
+
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="name">Nome Completo</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none">
+                                            <span class="material-symbols-outlined text-[20px]">person</span>
+                                        </span>
+                                        <input class="form-input block w-full rounded-lg border-slate-300 bg-white dark:bg-slate-800/50 dark:border-slate-600 dark:text-white pl-10 pr-3 py-2.5 focus:border-primary focus:ring-primary sm:text-sm shadow-sm transition-colors" id="name" placeholder="Digite o nome completo" type="text"/>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="cpf">CPF</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none">
+                                            <span class="material-symbols-outlined text-[20px]">id_card</span>
+                                        </span>
+                                        <input class="form-input block w-full rounded-lg border-slate-300 bg-white dark:bg-slate-800/50 dark:border-slate-600 dark:text-white pl-10 pr-3 py-2.5 focus:border-primary focus:ring-primary sm:text-sm shadow-sm transition-colors" 
+                                               id="cpf" placeholder="000.000.000-00" type="text" maxlength="14" oninput="mascaraCPF(this)"/>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="email">Endereço de E-mail</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none">
+                                            <span class="material-symbols-outlined text-[20px]">mail</span>
+                                        </span>
+                                        <input disabled class="form-input block w-full rounded-lg border-slate-300 bg-slate-100 dark:bg-slate-900/50 dark:border-slate-700 text-slate-500 dark:text-slate-400 pl-10 pr-3 py-2.5 cursor-not-allowed sm:text-sm shadow-sm" id="email" type="email"/>
+                                    </div>
+                                    <p class="text-xs text-slate-400">O e-mail não pode ser alterado diretamente.</p>
+                                </div>
+
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="newPassword">Nova Senha (Opcional)</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none">
+                                            <span class="material-symbols-outlined text-[20px]">lock_open</span>
+                                        </span>
+                                        <input class="form-input block w-full rounded-lg border-slate-300 bg-white dark:bg-slate-800/50 dark:border-slate-600 dark:text-white pl-10 pr-3 py-2.5 focus:border-primary focus:ring-primary sm:text-sm shadow-sm transition-colors" id="newPassword" placeholder="Digite para trocar a senha" type="text"/>
+                                    </div>
+                                    <p class="text-xs text-orange-500 flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[14px]">info</span>
+                                        Alterar a senha aqui requer permissões de Admin API.
+                                    </p>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-700/50 flex flex-col sm:flex-row items-center justify-end gap-3">
+                        <a href="admin.html" class="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 text-center transition-all shadow-sm">
+                            Cancelar
+                        </a>
+                        <button id="saveBtn" class="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-blue-600 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all flex items-center justify-center gap-2" type="submit">
+                            <span class="material-symbols-outlined text-[18px]">save</span>
+                            Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const { createClient } = supabase;
+        const supabaseUrl = "https://tsnryihpnjtlitipkyjr.supabase.co"; 
+        const supabaseKey = "sb_publishable_4_NjFd3BfYLP4GPmIJDkXA_xR7ZHp50"; 
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetUserId = urlParams.get('id');
+
+        const nameInput = document.getElementById('name');
+        const cpfInput = document.getElementById('cpf'); // NOVO
+        const emailInput = document.getElementById('email');
+        const breadcrumbName = document.getElementById('breadcrumbName');
+        const avatarInitials = document.getElementById('avatarInitials');
+        const saveBtn = document.getElementById('saveBtn');
+
+        // MÁSCARA CPF (Visualização bonita)
+        function mascaraCPF(i){
+            var v = i.value;
+            if(isNaN(v[v.length-1])){ 
+               i.value = v.substring(0, v.length-1);
+               return;
+            }
+            i.setAttribute("maxlength", "14");
+            if (v.length == 3 || v.length == 7) i.value += ".";
+            if (v.length == 11) i.value += "-";
+        }
+        // Aplica a máscara numa string crua (para quando carregar do banco)
+        function aplicarMascaraString(cpf) {
+            if (!cpf) return "";
+            cpf = cpf.replace(/\D/g, ''); // limpa tudo
+            return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+        }
+
+        async function init() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = "index.html"; return; }
+
+            // Verifica se quem está acessando é Admin
+            const { data: currentUserProfile } = await supabaseClient
+                .from("profiles").select("role").eq("id", session.user.id).single();
+
+            if (currentUserProfile.role !== 'admin') {
+                alert("Acesso Negado.");
+                window.location.href = "client.html";
+                return;
+            }
+
+            if (!targetUserId) {
+                alert("Nenhum usuário selecionado.");
+                window.location.href = "admin.html";
+                return;
+            }
+
+            loadTargetUserData();
+        }
+
+        async function loadTargetUserData() {
+            try {
+                const { data: user, error } = await supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', targetUserId)
+                    .single();
+
+                if (error) throw error;
+
+                emailInput.value = user.email || '';
+                nameInput.value = user.name || '';
+                
+                // Preenche o CPF e aplica a máscara visual
+                if (user.cpf) {
+                    cpfInput.value = aplicarMascaraString(user.cpf);
+                } else {
+                    cpfInput.value = '';
+                }
+                
+                const displayName = user.name || user.email.split('@')[0];
+                breadcrumbName.textContent = displayName;
+                avatarInitials.textContent = displayName.substring(0, 2).toUpperCase();
+
+            } catch (err) {
+                console.error("Erro ao carregar usuário:", err);
+                alert("Erro ao carregar dados do usuário.");
+            }
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = "Salvando...";
+            saveBtn.disabled = true;
+
+            const newName = nameInput.value;
+            const cpfRaw = cpfInput.value;
+            const newCpf = cpfRaw.replace(/\D/g, ''); // Limpa formatação para salvar só números
+
+            // Validação simples de tamanho do CPF (opcional)
+            if (newCpf.length > 0 && newCpf.length !== 11) {
+                alert("O CPF deve conter 11 dígitos.");
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+                return;
+            }
+
+            try {
+                // Atualiza o perfil no banco
+                const { error } = await supabaseClient
+                    .from('profiles')
+                    .update({ 
+                        name: newName,
+                        cpf: newCpf // Salva o CPF limpo
+                    })
+                    .eq('id', targetUserId);
+
+                if (error) throw error;
+
+                alert("Dados atualizados com sucesso!");
+                window.location.href = "admin.html";
+
+            } catch (err) {
+                console.error("Erro ao atualizar:", err);
+                alert("Erro ao salvar alterações: " + err.message);
+            } finally {
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+            }
+        });
+
+        // Expõe a função para o HTML usar no oninput
+        window.mascaraCPF = mascaraCPF;
+
+        init();
+    </script>
+</body>
+</html>

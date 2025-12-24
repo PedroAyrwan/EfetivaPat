@@ -1,0 +1,157 @@
+/* client-style.css - Estilo Unificado (Padrão Admin) */
+
+/* --- 1. FUNDO E TIPOGRAFIA (Igual ao Admin) --- */
+body {
+    background-color: #f8fafc;
+    /* O padrão de pontinhos exato do Admin */
+    background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
+    background-size: 24px 24px;
+    font-family: 'Inter', sans-serif;
+    position: relative;
+    overflow-x: hidden; 
+}
+
+.dark body {
+    background-color: #0f172a;
+    background-image: radial-gradient(#1e293b 1.5px, transparent 1.5px);
+}
+
+/* --- 2. LUZES FLUTUANTES (Blobs) --- */
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px); /* Blur ajustado para igualar o Admin */
+    opacity: 0.5;
+    z-index: -1;
+    pointer-events: none;
+    animation: float 15s infinite ease-in-out alternate;
+}
+
+.blob-blue {
+    top: -10%;
+    right: 20%;
+    width: 40vw;
+    height: 40vw;
+    background: rgba(59, 130, 246, 0.3); /* Azul */
+}
+
+.blob-purple {
+    bottom: -10%;
+    left: 10%;
+    width: 35vw;
+    height: 35vw;
+    background: rgba(168, 85, 247, 0.3); /* Roxo */
+    animation-delay: -5s;
+}
+
+@keyframes float {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-20px, 30px) scale(1.1); }
+}
+
+/* --- 3. EFEITO DE VIDRO (Glassmorphism) --- */
+.glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px); /* Blur igual ao do Admin */
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.dark .glass {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* --- 4. BOTÕES (Estilo "Novo Cadastro") --- */
+
+/* Botão Azul (Para "Atualizar") */
+.btn-gradient-blue {
+    background: linear-gradient(135deg, #136dec 0%, #0f5cbd 100%);
+    color: white;
+    border: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(19, 109, 236, 0.2);
+}
+
+.btn-gradient-blue:hover {
+    box-shadow: 0 6px 16px rgba(19, 109, 236, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-gradient-blue:active {
+    transform: translateY(0);
+}
+
+/* Botão Verde (Para "Baixar Tudo") - Mantendo o mesmo estilo visual */
+.btn-gradient-green {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.btn-gradient-green:hover {
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-gradient-green:active {
+    transform: translateY(0);
+}
+
+/* Estado Desabilitado (Carregando) */
+button:disabled {
+    opacity: 0.7;
+    cursor: wait;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* --- 5. TABELA E ANIMAÇÕES --- */
+/* Container da tabela com bordas arredondadas e sombra suave */
+.table-container {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Animação de entrada das linhas (Cascata) */
+tbody tr {
+    animation: fadeInUp 0.5s ease forwards;
+    opacity: 0;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Delay para efeito cascata */
+tbody tr:nth-child(1) { animation-delay: 0.05s; }
+tbody tr:nth-child(2) { animation-delay: 0.1s; }
+tbody tr:nth-child(3) { animation-delay: 0.15s; }
+tbody tr:nth-child(4) { animation-delay: 0.2s; }
+tbody tr:nth-child(5) { animation-delay: 0.25s; }
+
+/* Scrollbar sutil */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+
+/* Animação de digitação (três pontinhos) */
+.typing-dot {
+    animation: typing 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+}
+
+/* Scrollbar fina para o chat */
+#chat-messages::-webkit-scrollbar { width: 4px; }
+#chat-messages::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
