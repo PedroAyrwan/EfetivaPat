@@ -1,5 +1,5 @@
 // ======================================================
-// LÓGICA DE LOGIN (E-MAIL, CPF OU CNPJ)
+// ARQUIVO: login.js (Corrigido e Otimizado)
 // ======================================================
 
 const { createClient } = supabase;
@@ -11,26 +11,32 @@ const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
 // ELEMENTOS DO DOM
 const loginForm = document.getElementById('formLogin');
-const loginInput = document.getElementById('loginInput'); // Elemento do campo de texto
+const loginInput = document.getElementById('loginInput'); 
 const btnLogin = document.getElementById('btnLogin');
 
 // ======================================================
-// 0. MÁSCARA DE INPUT (CPF E CNPJ AUTOMÁTICO)
+// 0. MÁSCARA INTELIGENTE (CPF, CNPJ OU EMAIL)
 // ======================================================
 if (loginInput) {
     loginInput.addEventListener('input', function(e) {
         let valor = e.target.value;
         
-        // Se tiver "@", é email, então não fazemos nada
-        if (valor.includes('@')) return;
+        // 1. REGRA DE PROTEÇÃO:
+        // Se o usuário digitou alguma LETRA (a-z) ou @, assumimos que é E-mail.
+        // Então paramos a função imediatamente para não apagar o texto.
+        if (/[a-zA-Z@]/.test(valor)) {
+            return; 
+        }
 
-        // Remove tudo que não é número
+        // --- Daqui para baixo só executa se NÃO tiver letras (ou seja, só números) ---
+
+        // Remove tudo que não é número para formatar
         valor = valor.replace(/\D/g, "");
 
-        // Limita ao tamanho máximo de um CNPJ (14 números)
+        // Limita tamanho (CNPJ são 14 dígitos)
         if (valor.length > 14) valor = valor.slice(0, 14);
 
-        // Aplica a máscara
+        // Aplica a formatação visual (Pontos e traços)
         if (valor.length <= 11) {
             // CPF (000.000.000-00)
             valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
@@ -53,12 +59,13 @@ if (loginInput) {
 // ======================================================
 if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Impede o recarregamento da página
 
         // Pega os valores
         const rawLoginValue = document.getElementById('loginInput').value.trim();
         const password = document.getElementById('passwordInput').value;
         
+        // Variável que vai guardar o e-mail final para o login
         let emailFinal = rawLoginValue;
 
         // Feedback Visual (Botão Carregando)
@@ -69,42 +76,40 @@ if (loginForm) {
 
         try {
             // --- PASSO A: DETECÇÃO DE DOCUMENTO (CPF ou CNPJ) ---
-            // Se não tiver '@', assumimos que é documento
+            // Se não tiver '@', assumimos que é um documento
             if (!rawLoginValue.includes('@')) {
-                const cleanDoc = rawLoginValue.replace(/\D/g, ''); // Limpa pontos e traços
+                const cleanDoc = rawLoginValue.replace(/\D/g, ''); // Limpa pontos e traços (fica só números)
                 
                 if (cleanDoc.length === 0) {
                     throw new Error("Por favor, digite um E-mail, CPF ou CNPJ válido.");
                 }
 
-                let foundEmail = null;
-                let rpcError = null;
+                console.log("🔍 Buscando e-mail vinculado ao documento:", cleanDoc);
 
-                // DECISÃO: É CPF OU CNPJ?
-                if (cleanDoc.length === 11) {
-                    // --- É UM CPF ---
-                    const response = await supabaseClient.rpc('get_email_by_cpf', { target_cpf: cleanDoc });
-                    foundEmail = response.data;
-                    rpcError = response.error;
-                } else if (cleanDoc.length === 14) {
-                    // --- É UM CNPJ ---
-                    const response = await supabaseClient.rpc('get_email_by_cnpj', { target_cnpj: cleanDoc });
-                    foundEmail = response.data;
-                    rpcError = response.error;
-                } else {
-                    throw new Error("Documento inválido. Digite 11 números (CPF) ou 14 números (CNPJ).");
+                // BUSCA DIRETA NO BANCO (Substituindo o RPC)
+                // Procura na tabela profiles se existe esse CPF ou CNPJ
+                const { data, error } = await supabaseClient
+                    .from('profiles')
+                    .select('email')
+                    .or(`cpf.eq.${cleanDoc},cnpj.eq.${cleanDoc}`) // Procura nas duas colunas
+                    .maybeSingle(); // Retorna null se não achar (não dá erro)
+
+                if (error) {
+                    console.error("Erro Supabase:", error);
+                    throw new Error("Erro ao consultar banco de dados.");
                 }
 
-                if (rpcError || !foundEmail) {
-                    console.error("Erro RPC:", rpcError);
-                    throw new Error("Documento não encontrado no sistema.");
+                if (!data || !data.email) {
+                    throw new Error("CPF/CNPJ não encontrado no sistema. Verifique os números.");
                 }
 
-                console.log("Documento Reconhecido. Logando com:", foundEmail);
-                emailFinal = foundEmail;
+                // Se achou, usamos o e-mail encontrado
+                console.log("✅ Documento reconhecido. E-mail associado:", data.email);
+                emailFinal = data.email;
             }
 
             // --- PASSO B: LOGIN NO SUPABASE ---
+            // O Supabase sempre exige email+senha no final
             const { data, error } = await supabaseClient.auth.signInWithPassword({
                 email: emailFinal,
                 password: password,
@@ -113,38 +118,40 @@ if (loginForm) {
             if (error) throw error;
 
             // --- PASSO C: VERIFICAÇÃO DE PERFIL (ADMIN ou CLIENTE) ---
-            const { data: userData } = await supabaseClient.auth.getUser();
-            const user = userData.user;
+            showToast("Login validado! Verificando perfil...", "info");
+            
+            const user = data.user;
 
             // Busca o perfil para saber se é admin ou cliente
             const { data: profile, error: profileError } = await supabaseClient
                 .from("profiles")
                 .select("role")
                 .eq("id", user.id)
-                .maybeSingle();
+                .single();
 
-            if (profileError) {
-                throw new Error("Erro ao buscar perfil: " + profileError.message);
-            } else if (!profile) {
-                throw new Error("Perfil de usuário não encontrado.");
-            } else {
-                // SUCESSO!
-                showToast("Login realizado! Redirecionando...", "success");
-                
-                setTimeout(() => {
-                    if (profile.role === "admin") {
-                        window.location.href = "admin.html";
-                    } else {
-                        window.location.href = "repositorio_cliente.html"; 
-                    }
-                }, 1000);
+            if (profileError || !profile) {
+                // Se der erro aqui, redireciona para o padrão
+                console.warn("Perfil não encontrado, indo para repositório.");
+                window.location.href = "repositorio_cliente.html";
+                return;
             }
+
+            // --- SUCESSO! REDIRECIONA ---
+            showToast("Sucesso! Redirecionando...", "success");
+            
+            setTimeout(() => {
+                if (profile.role === "admin") {
+                    window.location.href = "admin.html";
+                } else {
+                    window.location.href = "repositorio_cliente.html"; // Corrigido para o nome do seu arquivo
+                }
+            }, 1000);
 
         } catch (err) {
             console.error("Erro Login:", err);
             
             let msg = err.message;
-            if (msg.includes("Invalid login")) msg = "Dados de acesso incorretos.";
+            if (msg.includes("Invalid login")) msg = "Senha incorreta ou usuário inexistente.";
             
             showToast(msg, "error");
             
@@ -157,7 +164,7 @@ if (loginForm) {
 }
 
 // ======================================================
-// 2. LÓGICA DE RECUPERAÇÃO DE SENHA (Mantida igual)
+// 2. LÓGICA DE RECUPERAÇÃO DE SENHA
 // ======================================================
 
 window.openRecoverModal = function(e) {
@@ -178,8 +185,17 @@ window.closeRecoverModal = function() {
     modal.querySelector('div').classList.add('scale-95');
     setTimeout(() => {
         modal.classList.add('hidden');
-        document.getElementById('recoverEmail').value = '';
+        const inputEmail = document.getElementById('recoverEmail');
+        if(inputEmail) inputEmail.value = '';
     }, 300);
+}
+
+// Fechar modal ao clicar fora
+const recoverModal = document.getElementById('recoverModal');
+if(recoverModal) {
+    recoverModal.addEventListener('click', function(e) {
+        if (e.target.id === 'recoverModal') window.closeRecoverModal();
+    });
 }
 
 window.handleRecover = async function(e) {
@@ -196,7 +212,8 @@ window.handleRecover = async function(e) {
         btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm">progress_activity</span> Enviando...`;
 
         // URL para onde o usuário vai ao clicar no e-mail
-        const redirectUrl = window.location.origin + "/atualizar_senha.html";
+        // Garanta que você tem o arquivo atualizar_senha.html ou mande para o index
+        const redirectUrl = window.location.origin + "/index.html"; 
 
         const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
             redirectTo: redirectUrl,
@@ -205,11 +222,11 @@ window.handleRecover = async function(e) {
         if (error) throw error;
 
         showToast("Link enviado! Verifique seu e-mail.", "success");
-        window.closeRecoverModal();
+        setTimeout(window.closeRecoverModal, 2000);
 
     } catch (error) {
         console.error('Erro Recover:', error);
-        let msg = error.status === 429 ? "Muitas tentativas. Aguarde 60s." : error.message;
+        let msg = error.status === 429 ? "Muitas tentativas. Aguarde 60s." : "Erro ao enviar email. Verifique o endereço.";
         showToast(msg, "error");
     } finally {
         btn.disabled = false;
@@ -230,7 +247,7 @@ function showToast(msg, type="info") {
             text: msg,
             duration: 4000,
             gravity: "top",
-            position: "right",
+            position: "center", // Mudei para center para ficar mais visível no mobile
             stopOnFocus: true,
             style: { background: bg, borderRadius: "12px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }
         }).showToast();
