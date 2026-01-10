@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-BR">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Login - EfetivaPat</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: { "primary": "#136dec" },
+                    fontFamily: { "display": ["Inter", "sans-serif"] },
+                },
+            },
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="h-screen flex items-center justify-center p-4 overflow-hidden bg-slate-50 dark:bg-slate-900">
+
+    <div class="blob blob-blue"></div>
+    <div class="blob blob-purple"></div>
+
+    <div class="glass-card w-full max-w-md rounded-3xl p-8 sm:p-10 animate-enter relative z-10 bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl">
+
+        <div class="flex flex-col items-center justify-center gap-6 mb-8 w-full">
+            <div class="h-32 w-full flex items-center justify-center logo-hover">
+                <img src="imagem/logo.png" alt="Logo" class="h-full w-auto object-contain drop-shadow-sm">
+            </div>
+            <div class="text-center">
+                <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Bem-vindo de volta</h1>
+                <p class="text-sm text-slate-500 dark:text-slate-300 mt-2 font-medium">
+                   Acesse o painel do <span class="font-bold text-primary">EfetivaPat</span>
+                </p>
+            </div>
+        </div>
+
+        <form id="formLogin" class="flex flex-col gap-5">
+            
+            <div class="space-y-1.5">
+                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider ml-1" for="loginInput">E-mail, CPF ou CNPJ</label>
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <span class="material-symbols-outlined text-[20px]">person</span>
+                    </div>
+                    <input class="block w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 pl-11 py-3 text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary border border-slate-200 dark:border-slate-700 transition-all shadow-sm" 
+                        id="loginInput" type="text" placeholder="Email, CPF ou CNPJ" required/>
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider ml-1" for="passwordInput">Senha</label>
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <span class="material-symbols-outlined text-[20px]">lock</span>
+                    </div>
+                    <input class="block w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 pl-11 py-3 text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary border border-slate-200 dark:border-slate-700 transition-all shadow-sm" 
+                        id="passwordInput" type="password" placeholder="••••••••" required/>
+                </div>
+            </div>
+
+            <div class="flex justify-end -mt-2">
+                <a href="#" onclick="openRecoverModal(event)" class="text-xs font-semibold text-primary hover:text-blue-600 transition-colors">
+                    Esqueceu a senha?
+                </a>
+            </div>
+
+            <button type="submit" id="btnLogin" class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-2">
+                <span>Entrar no Sistema</span>
+                <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+            </button>
+        </form>
+
+    </div>
+
+    <div id="recoverModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-300 opacity-0 px-4">
+        <div class="glass-card w-full max-w-sm p-8 rounded-2xl border border-white/50 shadow-2xl relative transform scale-95 transition-all duration-300 bg-white dark:bg-slate-800">
+            <button type="button" onclick="closeRecoverModal()" class="absolute top-4 right-4 text-slate-400 hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 bg-blue-50 text-primary rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span class="material-symbols-outlined text-2xl">lock_reset</span>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 dark:text-white">Recuperar Acesso</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-300 mt-1">Digite seu e-mail para receber o link.</p>
+            </div>
+            
+            <form onsubmit="handleRecover(event)" class="flex flex-col gap-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider ml-1">E-mail Cadastrado</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-3 text-slate-400 text-[20px]">mail</span>
+                        <input type="email" id="recoverEmail" required placeholder="exemplo@email.com"
+                            class="block w-full rounded-xl bg-slate-50 dark:bg-slate-800 pl-11 py-3 text-sm font-medium text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600 focus:ring-primary focus:border-primary focus:outline-none">
+                    </div>
+                </div>
+                <button type="submit" id="btnRecover" class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-[0.98] flex items-center justify-center gap-2 mt-2">
+                    <span>Enviar Link</span>
+                    <span class="material-symbols-outlined text-sm">send</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="config.js"></script> <script src="login.js"></script>  </body>
+</html>
