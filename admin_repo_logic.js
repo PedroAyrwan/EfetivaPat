@@ -1,5 +1,5 @@
 // ==========================================
-// ARQUIVO: admin_repo_logic.js (Versão v10 - Lógica "Força Bruta")
+// ARQUIVO: admin_repo_logic.js (Versão v11 - Debug e Força Bruta)
 // ==========================================
 
 const BUCKET_NAME = 'arquivo_clientes'; 
@@ -7,33 +7,23 @@ const urlParams = new URLSearchParams(window.location.search);
 const targetClientId = urlParams.get('id');
 let currentPath = ""; 
 
-// ==========================================
 // 1. INICIALIZAÇÃO
-// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log(">>> GERENCIADOR v10 (FORÇA BRUTA) INICIADO.");
-    setTimeout(initSystem, 100);
+    // ESTE ALERTA DEVE APARECER AO RECARREGAR A PÁGINA
+    console.log("SISTEMA V11 CARREGADO");
+    setTimeout(initSystem, 500);
 });
 
 async function initSystem() {
-    if (typeof supabaseClient === 'undefined') {
-        alert("Erro: config.js não carregou."); return;
-    }
+    if (typeof supabaseClient === 'undefined') { alert("Erro: config.js não carregou."); return; }
 
-    // Verifica Sessão
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) { window.location.href = "index.html"; return; }
 
-    // Verifica Admin
     const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', session.user.id).single();
-    if (!profile || profile.role !== 'admin') { 
-        alert("Acesso Negado."); window.location.href = "repositorio_cliente.html"; return; 
-    }
+    if (!profile || profile.role !== 'admin') { alert("Acesso Negado."); window.location.href = "repositorio_cliente.html"; return; }
 
-    // Verifica Cliente
-    if (!targetClientId) {
-        showToast("Erro: ID do cliente ausente.", "error"); return;
-    }
+    if (!targetClientId) { showToast("Erro: ID cliente não encontrado.", "error"); return; }
 
     await loadClientInfo();
     await checkLevantamentoStatus(); 
@@ -45,23 +35,18 @@ async function loadClientInfo() {
     try {
         const { data: client } = await supabaseClient.from('profiles').select('name, email').eq('id', targetClientId).single();
         if (client) {
-            const displayName = client.name || client.email;
-            document.getElementById('clientEmailDisplay').innerText = displayName;
-            document.getElementById('pageTitle').innerText = `Arquivos de ${displayName.split(' ')[0]}`;
+            document.getElementById('clientEmailDisplay').innerText = client.name || client.email;
+            document.getElementById('pageTitle').innerText = `Arquivos de ${(client.name || client.email).split(' ')[0]}`;
         }
-    } catch (err) { console.error(err); }
+    } catch (e) { console.error(e); }
 }
 
-// ==========================================
-// 2. LÓGICA DO LEVANTAMENTO
-// ==========================================
+// 2. LÓGICA DO LEVANTAMENTO (Pastas)
 async function checkLevantamentoStatus() {
     const toggle = document.getElementById('toggleLevantamento');
     const btn = document.getElementById('btnOpenLevantamento');
-    
     const { data } = await supabaseClient.storage.from(BUCKET_NAME).list(`${targetClientId}/Levantamento`);
     const exists = data && data.length > 0;
-    
     if(toggle) toggle.checked = exists;
     if(btn) exists ? btn.classList.remove('hidden') : btn.classList.add('hidden');
 }
@@ -71,319 +56,238 @@ async function handleLevantamentoToggle() {
     const btn = document.getElementById('btnOpenLevantamento');
     
     if (toggle.checked) {
-        showToast("Criando estrutura de Levantamento...", "info");
-        // Garante criação da pasta fotos
-        const pathFotos = `${targetClientId}/Levantamento/fotos/.emptyFolderPlaceholder`;
+        showToast("Criando pastas Levantamento e fotos...", "info");
+        // Cria Levantamento/fotos/.emptyFolderPlaceholder
+        const path = `${targetClientId}/Levantamento/fotos/.emptyFolderPlaceholder`;
+        const { error } = await supabaseClient.storage.from(BUCKET_NAME).upload(path, new Blob(['']), { upsert: true });
         
-        const { error } = await supabaseClient.storage.from(BUCKET_NAME).upload(pathFotos, new Blob(['']), { upsert: true });
-
-        if (error) {
-            showToast("Erro ao criar pastas.", "error");
-            toggle.checked = false;
-        } else {
-            showToast("Levantamento Ativado!", "success");
+        if (!error) {
+            showToast("Estrutura criada!", "success");
             btn.classList.remove('hidden');
             if(currentPath === "") listFiles();
+        } else {
+            showToast("Erro ao criar pastas.", "error");
+            toggle.checked = false;
         }
     } else {
         btn.classList.add('hidden');
-        showToast("Atalho desativado.", "info");
+        showToast("Desativado visualmente.", "info");
     }
 }
 
-function goToLevantamento() {
-    window.location.href = `levantamento.html?id=${targetClientId}`;
-}
+function goToLevantamento() { window.location.href = `levantamento.html?id=${targetClientId}`; }
 
-// ==========================================
-// 3. LISTAGEM
-// ==========================================
-async function listFiles() {
-    const listBody = document.getElementById('filesListBody');
-    if (!listBody) return;
-    
-    const skeleton = document.getElementById('skeleton-loader-1');
-    if(skeleton) skeleton.parentElement.innerHTML = '';
-    
-    listBody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-slate-400"><span class="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span><p class="mt-2 text-xs">Carregando...</p></td></tr>`;
-
-    const fullPath = currentPath ? `${targetClientId}/${currentPath}` : `${targetClientId}`;
-
-    try {
-        const { data, error } = await supabaseClient.storage
-            .from(BUCKET_NAME)
-            .list(fullPath, { limit: 100, sortBy: { column: 'name', order: 'asc' } });
-
-        if (error) throw error;
-        listBody.innerHTML = '';
-
-        if (currentPath !== "") {
-            listBody.innerHTML += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer border-b border-slate-100 dark:border-slate-700 transition-colors" onclick="goUp()"><td class="py-3 px-6 text-slate-600 dark:text-slate-400 font-bold flex items-center gap-2"><span class="material-symbols-outlined">arrow_back</span> Voltar</td><td colspan="3"></td></tr>`;
-        }
-
-        const validItems = data ? data.filter(i => i.name !== '.emptyFolderPlaceholder' && i.name !== '.keep') : [];
-
-        if (validItems.length === 0) {
-            listBody.innerHTML += `<tr><td colspan="4" class="text-center py-12 text-slate-400 dark:text-slate-500 flex flex-col items-center justify-center"><span class="material-symbols-outlined text-4xl mb-2 opacity-30">folder_open</span>Pasta vazia.</td></tr>`;
-            return;
-        }
-
-        validItems.forEach(item => {
-            const isFolder = !item.id;
-            const iconData = isFolder ? {icon:'folder', color:'text-yellow-500'} : getFileIcon(item.name);
-            const sizeText = isFolder ? '-' : formatBytes(item.metadata.size);
-            const dateText = item.created_at ? new Date(item.created_at).toLocaleDateString() : '-';
-            
-            // Highlight pastas de sistema
-            const isSystemFolder = isFolder && (item.name === 'Levantamento' || item.name === 'fotos');
-            const rowClass = isSystemFolder ? "bg-indigo-50/60 dark:bg-indigo-900/10 border-indigo-100" : "";
-            
-            const tr = document.createElement('tr');
-            tr.className = `hover:bg-slate-50 dark:hover:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700 transition-colors group ${rowClass}`;
-            if(isFolder) tr.onclick = () => enterFolder(item.name);
-
-            tr.innerHTML = `
-                <td class="py-3 px-6 cursor-pointer">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined ${iconData.color} text-2xl">${iconData.icon}</span>
-                        <span class="font-medium text-slate-700 dark:text-slate-200 truncate max-w-[200px] sm:max-w-xs">${item.name}</span>
-                    </div>
-                </td>
-                <td class="py-3 px-6 text-xs text-slate-500 hidden sm:table-cell">${dateText}</td>
-                <td class="py-3 px-6 text-xs text-slate-500 hidden md:table-cell">${sizeText}</td>
-                <td class="py-3 px-6 text-right">
-                    <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        ${!isFolder ? `<button onclick="downloadFile('${item.name}')" class="p-1.5 text-slate-400 hover:text-primary hover:bg-blue-50 transition-colors" title="Baixar"><span class="material-symbols-outlined">download</span></button>` : ''}
-                        <button onclick="event.stopPropagation(); deleteItem('${item.name}', ${isFolder})" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Excluir"><span class="material-symbols-outlined">delete</span></button>
-                    </div>
-                </td>
-            `;
-            listBody.appendChild(tr);
-        });
-
-    } catch (err) {
-        console.error(err);
-        listBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red-500">Erro lista.</td></tr>`;
-    }
-}
-
-// ==========================================
-// 4. UPLOAD INTELIGENTE (CORRIGIDO)
-// ==========================================
+// 3. UPLOAD INTELIGENTE (O CORAÇÃO DO PROBLEMA)
 async function handleFiles(files) {
     if (!files || files.length === 0) return;
-    showToast(`Processando ${files.length} itens...`, "info");
+    
+    // Detecta se estamos dentro de "Levantamento" (Raiz ou Subpasta)
+    // Se currentPath for vazio, verifica se a pasta selecionada visualmente é Levantamento (caso raro)
+    const isInLevantamento = currentPath.startsWith('Levantamento');
 
-    const isLevantamentoContext = currentPath.startsWith('Levantamento');
+    showToast(`Analisando ${files.length} arquivos...`, "info");
 
     for (const file of files) {
-        let finalFile = file;
+        let fileToUpload = file;
         let finalName = file.name;
-        let forcePath = null; // Se null, usa o currentPath
+        let destinationPath = currentPath; // Padrão: onde o usuário está
 
-        const isImage = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name);
-        const isExcel = /\.(xlsx|xls|csv)$/i.test(file.name);
+        const isImage = /\.(jpg|jpeg|png|webp)$/i.test(file.name);
+        const isSpreadsheet = /\.(xlsx|xls|csv)$/i.test(file.name);
 
-        // --- LÓGICA RIGOROSA DO LEVANTAMENTO ---
-        if (isLevantamentoContext) {
+        // --- LÓGICA ESPECIAL PARA LEVANTAMENTO ---
+        if (isInLevantamento) {
             
-            // CASO 1: É IMAGEM -> Força ir para "Levantamento/fotos/"
+            // CASO A: É UMA FOTO
             if (isImage) {
-                console.log("Detectado: Imagem em Levantamento -> Redirecionando para fotos");
-                forcePath = "Levantamento/fotos/";
+                // Força o destino para a pasta 'fotos', não importa onde esteja
+                destinationPath = "Levantamento/fotos/";
                 
-                // Pergunta nome e número
-                const renameData = await promptForLevantamentoRename(file.name);
+                // Pergunta os dados
+                const renameData = await promptRenameImage(file.name);
                 if (renameData) {
                     finalName = renameData.newName;
-                    finalFile = new File([file], finalName, { type: file.type });
+                    // Recria o arquivo com o novo nome
+                    fileToUpload = new File([file], finalName, { type: file.type });
+                    showToast(`Renomeado para: ${finalName}`, "success");
                 } else if (renameData === null) {
-                    // Usuário cancelou
-                    continue; 
+                    continue; // Cancelou upload
                 }
             }
 
-            // CASO 2: É EXCEL -> Força ir para "Levantamento/" (Raiz do levantamento)
-            else if (isExcel) {
-                console.log("Detectado: Excel em Levantamento -> Substituindo na raiz");
-                forcePath = "Levantamento/";
-                // Apaga planilhas antigas na raiz do levantamento antes de subir a nova
-                await deleteOldSpreadsheetsInLevantamentoRoot();
+            // CASO B: É PLANILHA
+            else if (isSpreadsheet) {
+                // Força o destino para a raiz do Levantamento
+                destinationPath = "Levantamento/";
+                
+                // Apaga a planilha anterior ANTES de subir a nova
+                await deleteOldSpreadsheet();
             }
         }
 
-        // Faz o upload (se forcePath existir, ele ignora onde o usuário está olhando)
-        await uploadFile(finalFile, finalName, forcePath);
+        // Executa o upload com o destino calculado
+        await uploadFileToPath(fileToUpload, finalName, destinationPath);
     }
 
-    showToast("Finalizado!", "success");
-    listFiles(); // Atualiza a visualização
-    
-    // Limpa inputs
+    listFiles();
     if(document.getElementById('fileElem')) document.getElementById('fileElem').value = '';
 }
 
-// Apaga APENAS planilhas na raiz do Levantamento
-async function deleteOldSpreadsheetsInLevantamentoRoot() {
-    const rootPath = `${targetClientId}/Levantamento/`;
-    const { data: files } = await supabaseClient.storage.from(BUCKET_NAME).list(rootPath);
-    
-    if (files && files.length > 0) {
-        const spreadsheets = files.filter(f => f.name.match(/\.(xlsx|xls|csv)$/i));
-        if (spreadsheets.length > 0) {
-            showToast("Substituindo planilha antiga...", "info");
-            const paths = spreadsheets.map(f => `${rootPath}${f.name}`);
-            await supabaseClient.storage.from(BUCKET_NAME).remove(paths);
-        }
-    }
-}
+// Pergunta dados da foto
+async function promptRenameImage(originalName) {
+    // Pequeno delay para UI
+    await new Promise(r => setTimeout(r, 50));
 
-async function promptForLevantamentoRename(originalName) {
-    // Delay para a UI não travar
-    await new Promise(r => setTimeout(r, 100));
+    const nomeItem = prompt(`ARQUIVO: ${originalName}\n\nDigite o NOME do Item (ex: Cadeira):`);
+    if (nomeItem === null) return null; // Cancelou
+    if (nomeItem.trim() === "") return false; // Não quis renomear
 
-    const itemName = prompt(`CONFIGURANDO FOTO: ${originalName}\n\nDigite o NOME do Item (ex: Cadeira):`);
-    if (itemName === null) return null; // Cancelar
-    if (itemName.trim() === "") return false; // Manter original
+    const numItem = prompt(`Digite o NÚMERO do Item (ex: 03):`);
+    if (numItem === null) return null;
 
-    const itemNum = prompt(`Digite o NÚMERO do Item (ex: 03):`);
-    if (itemNum === null) return null; 
+    const isItem = confirm(`É a foto do ITEM (${nomeItem})?\n\n[OK] = Sim, foto do Item\n[CANCELAR] = Não, foto da Etiqueta/Número`);
 
-    const isItemPhoto = confirm(`Essa foto é do ITEM (${itemName})?\n\n[OK] = Sim, Foto do Item\n[CANCELAR] = Não, Foto do Número/Etiqueta`);
-    
-    const safeItemName = itemName.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "_");
-    const safeItemNum = itemNum.trim().replace(/[^0-9]/g, "");
-    const ext = originalName.split('.').pop().toLowerCase();
+    const safeName = nomeItem.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "_");
+    const safeNum = numItem.replace(/[^0-9]/g, "");
+    const ext = originalName.split('.').pop();
 
-    let newFileName = "";
-    if (isItemPhoto) {
-        newFileName = `foto_${safeItemName}.${ext}`;
+    if (isItem) {
+        return { newName: `foto_${safeName}.${ext}` };
     } else {
-        newFileName = `foto_numero_${safeItemNum}.${ext}`;
+        return { newName: `foto_numero_${safeNum}.${ext}` };
     }
-
-    return { newName: newFileName };
 }
 
-// Upload com opção de Override Path
-async function uploadFile(file, fileName, overridePath = null) {
-    // Se overridePath existe, usa ele. Se não, usa currentPath.
-    // .replace(/\/$/, "") remove barra no final para evitar duplicidade na concatenação
-    let pathPart = overridePath !== null ? overridePath : currentPath;
+// Apaga planilhas antigas na raiz Levantamento
+async function deleteOldSpreadsheet() {
+    showToast("Verificando planilhas antigas...", "info");
+    const path = `${targetClientId}/Levantamento/`;
+    const { data } = await supabaseClient.storage.from(BUCKET_NAME).list(path);
     
-    // Garante que o path termine com / se não for vazio
-    if (pathPart && !pathPart.endsWith('/')) pathPart += '/';
+    if(data && data.length > 0) {
+        const toDelete = data
+            .filter(f => f.name.match(/\.(xlsx|xls|csv)$/i))
+            .map(f => `${path}${f.name}`);
+            
+        if(toDelete.length > 0) {
+            await supabaseClient.storage.from(BUCKET_NAME).remove(toDelete);
+            showToast("Planilha anterior removida.", "info");
+        }
+    }
+}
 
+// Função de Upload Genérica
+async function uploadFileToPath(file, fileName, folderPath) {
+    // Garante barra no final do path
+    if (folderPath && !folderPath.endsWith('/')) folderPath += '/';
+    
     const cleanName = fileName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]/g, '_');
-    
-    // Caminho completo: ID_CLIENTE / PASTA / ARQUIVO
-    const fullPath = `${targetClientId}/${pathPart}${cleanName}`.replace(/\/+/g, '/');
+    const fullPath = `${targetClientId}/${folderPath}${cleanName}`.replace(/\/+/g, '/'); // Remove barras duplas
 
-    // UI de Progresso
-    const container = document.getElementById('upload-progress-container');
-    const pid = 'prog-' + Math.random().toString(36).substr(2, 9);
-    if (container) {
-        container.classList.remove('hidden');
-        container.insertAdjacentHTML('afterbegin', `
-            <div id="${pid}" class="bg-white dark:bg-slate-800 p-2 rounded border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3 text-xs mb-2">
-                <span class="material-symbols-outlined text-primary text-sm animate-spin">sync</span>
-                <span class="truncate flex-1 font-mono">${cleanName}</span>
-                <span class="text-[9px] text-slate-400 bg-slate-100 px-1 rounded">${pathPart || 'Raiz'}</span>
-            </div>
-        `);
-    }
-    const item = document.getElementById(pid);
+    const toastId = showToast(`Enviando ${cleanName}...`, "info");
 
     try {
-        const { error } = await supabaseClient.storage.from(BUCKET_NAME).upload(fullPath, file, { cacheControl: '3600', upsert: true });
-
-        if (error) throw error;
-
-        if(item) {
-            item.innerHTML = `<span class="material-symbols-outlined text-green-500 text-sm">check_circle</span> <span class="truncate flex-1 text-slate-600">${cleanName}</span>`;
-            setTimeout(() => item.remove(), 2500);
-        }
-
+        const { error } = await supabaseClient.storage.from(BUCKET_NAME).upload(fullPath, file, { upsert: true });
+        if(error) throw error;
+        // Sucesso silencioso para não spammar
     } catch (err) {
-        console.error("Erro Upload:", err);
-        if(item) { item.innerHTML = `<span class="material-symbols-outlined text-red-500 text-sm">error</span> <span class="truncate flex-1 text-red-500">Falha</span>`; }
+        console.error(err);
+        showToast(`Erro no envio: ${cleanName}`, "error");
     }
 }
 
-// ==========================================
-// 5. FUNÇÕES PADRÃO (CreateFolder, Delete, etc)
-// ==========================================
-async function createFolder() {
-    let name = prompt("Nome da nova pasta:");
-    if (!name) return;
-    name = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, '_');
+// 4. LISTAGEM E UTILITÁRIOS
+async function listFiles() {
+    const tbody = document.getElementById('filesListBody');
+    if(!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8">Carregando...</td></tr>';
+
+    const path = currentPath ? `${targetClientId}/${currentPath}` : `${targetClientId}`;
+
+    const { data, error } = await supabaseClient.storage.from(BUCKET_NAME).list(path, { sortBy: { column: 'name', order: 'asc' } });
+
+    if(error) { tbody.innerHTML = '<tr><td colspan="4" class="text-center text-red-500">Erro ao listar.</td></tr>'; return; }
+
+    tbody.innerHTML = '';
     
-    const path = `${targetClientId}/${currentPath}${name}/.emptyFolderPlaceholder`;
-    const { error } = await supabaseClient.storage.from(BUCKET_NAME).upload(path, new Blob(['']), { upsert: true });
+    if(currentPath !== "") {
+        tbody.innerHTML += `<tr onclick="goUp()" class="cursor-pointer hover:bg-slate-100 border-b"><td class="py-3 px-6 font-bold" colspan="4">⬅ Voltar</td></tr>`;
+    }
 
-    if (error) showToast("Erro ao criar.", "error"); else listFiles();
+    const items = data.filter(i => i.name !== '.emptyFolderPlaceholder');
+    if(items.length === 0) {
+        tbody.innerHTML += `<tr><td colspan="4" class="text-center py-8 text-slate-400">Pasta Vazia</td></tr>`;
+        return;
+    }
+
+    items.forEach(item => {
+        const isFolder = !item.id;
+        const icon = isFolder ? '📁' : (item.name.match(/\.(jpg|png)$/i) ? '🖼️' : '📄');
+        
+        // Se for a pasta fotos ou Levantamento, destaca
+        const isSpecial = (item.name === 'Levantamento' || item.name === 'fotos') && isFolder;
+        const style = isSpecial ? 'background-color: #eff6ff;' : '';
+
+        const row = document.createElement('tr');
+        row.className = 'border-b hover:bg-slate-50 cursor-pointer';
+        row.style = style;
+        if(isFolder) row.onclick = () => enterFolder(item.name);
+
+        row.innerHTML = `
+            <td class="py-3 px-6 flex items-center gap-2">${icon} ${item.name}</td>
+            <td class="py-3 px-6 hidden sm:table-cell">${item.created_at ? new Date(item.created_at).toLocaleDateString() : '-'}</td>
+            <td class="py-3 px-6 hidden md:table-cell">${isFolder ? '-' : formatBytes(item.metadata.size)}</td>
+            <td class="py-3 px-6 text-right">
+                ${!isFolder ? `<button onclick="downloadFile('${item.name}')" class="text-blue-500 mr-2">⬇</button>` : ''}
+                <button onclick="event.stopPropagation(); deleteItem('${item.name}', ${isFolder})" class="text-red-500">✖</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
 }
 
-async function downloadFile(name) {
-    const fullPath = `${targetClientId}/${currentPath}${name}`;
-    const { data } = await supabaseClient.storage.from(BUCKET_NAME).createSignedUrl(fullPath, 60, { download: true });
-    if(data) {
-        const a = document.createElement('a'); a.href = data.signedUrl; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-    } else { showToast("Erro link.", "error"); }
-}
-
-async function deleteItem(name, isFolder) {
-    if (!confirm(`Excluir "${name}"?`)) return;
-    const basePath = `${targetClientId}/${currentPath}${name}`;
-    try {
-        if (isFolder) {
-            showToast("Apagando conteúdo...", "info");
-            const { data: files } = await supabaseClient.storage.from(BUCKET_NAME).list(basePath);
-            if (files && files.length > 0) {
-                const paths = files.map(f => `${basePath}/${f.name}`);
-                await supabaseClient.storage.from(BUCKET_NAME).remove(paths);
-            }
-            await supabaseClient.storage.from(BUCKET_NAME).remove([`${basePath}/.emptyFolderPlaceholder`]);
-        } else {
-            await supabaseClient.storage.from(BUCKET_NAME).remove([basePath]);
-        }
-        showToast("Excluído.", "success");
-        listFiles();
-    } catch (err) { showToast("Erro ao excluir.", "error"); }
-}
-
+// Funções de Navegação
 function enterFolder(name) { currentPath += name + "/"; listFiles(); updateBreadcrumb(); }
 function goUp() { let p = currentPath.split('/').filter(x=>x); p.pop(); currentPath = p.length ? p.join('/')+'/' : ""; listFiles(); updateBreadcrumb(); }
 function goHome() { currentPath = ""; listFiles(); updateBreadcrumb(); }
-
-function updateBreadcrumb() {
+function updateBreadcrumb() { 
     const el = document.getElementById('pathBreadcrumb');
-    if(el) el.innerHTML = !currentPath ? `<span class="material-symbols-outlined text-[18px] align-middle">home</span> Início` : `<span onclick="goHome()" class="cursor-pointer hover:underline flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">home</span>Início</span> <span class="text-slate-300 mx-1">/</span> ${currentPath.replaceAll('/', ' / ').slice(0, -3)}`;
+    if(el) el.innerHTML = currentPath ? `Início / ${currentPath}` : `Início`;
 }
 
+// Utilitários
+async function createFolder() {
+    let name = prompt("Nome da pasta:");
+    if(!name) return;
+    const path = `${targetClientId}/${currentPath}${name}/.emptyFolderPlaceholder`;
+    await supabaseClient.storage.from(BUCKET_NAME).upload(path, new Blob(['']), {upsert:true});
+    listFiles();
+}
+async function deleteItem(name, isFolder) {
+    if(!confirm(`Excluir ${name}?`)) return;
+    const path = `${targetClientId}/${currentPath}${name}`;
+    if(isFolder) {
+        const {data} = await supabaseClient.storage.from(BUCKET_NAME).list(path);
+        const files = data.map(f => `${path}/${f.name}`);
+        if(files.length) await supabaseClient.storage.from(BUCKET_NAME).remove(files);
+        await supabaseClient.storage.from(BUCKET_NAME).remove([`${path}/.emptyFolderPlaceholder`]);
+    } else {
+        await supabaseClient.storage.from(BUCKET_NAME).remove([path]);
+    }
+    listFiles();
+}
+async function downloadFile(name) {
+    const { data } = await supabaseClient.storage.from(BUCKET_NAME).createSignedUrl(`${targetClientId}/${currentPath}${name}`, 60, {download: true});
+    if(data) window.open(data.signedUrl, '_blank');
+}
+function formatBytes(bytes) { if(bytes==0) return '0 B'; const k=1024, sizes=['B','KB','MB'], i=Math.floor(Math.log(bytes)/Math.log(k)); return parseFloat((bytes/Math.pow(k,i)).toFixed(1))+' '+sizes[i]; }
 function setupDragAndDrop() {
-    const dropArea = document.getElementById('drop-area');
-    if(!dropArea) return;
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => { dropArea.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); }, false); });
-    dropArea.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
+    const d = document.getElementById('drop-area');
+    if(!d) return;
+    d.addEventListener('dragover', e => { e.preventDefault(); d.classList.add('bg-blue-50'); });
+    d.addEventListener('dragleave', e => { e.preventDefault(); d.classList.remove('bg-blue-50'); });
+    d.addEventListener('drop', e => { e.preventDefault(); d.classList.remove('bg-blue-50'); handleFiles(e.dataTransfer.files); });
 }
-
-function getFileIcon(name) {
-    const ext = name.split('.').pop().toLowerCase();
-    if (['pdf'].includes(ext)) return { icon: 'picture_as_pdf', color: 'text-red-500' };
-    if (['doc', 'docx', 'txt'].includes(ext)) return { icon: 'article', color: 'text-blue-600' };
-    if (['xls', 'xlsx', 'csv'].includes(ext)) return { icon: 'table_view', color: 'text-green-600' };
-    if (['jpg', 'png', 'jpeg', 'webp', 'svg'].includes(ext)) return { icon: 'image', color: 'text-purple-500' };
-    return { icon: 'description', color: 'text-slate-400' };
-}
-
-function formatBytes(bytes) {
-    if (!+bytes) return '0 B';
-    const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
-
-function showToast(msg, type="info") {
-    const bg = type === 'error' ? "#ef4444" : (type === 'success' ? "#10b981" : "#136dec");
-    if (typeof Toastify !== 'undefined') Toastify({ text: msg, duration: 3000, gravity: "top", position: "right", style: { background: bg, borderRadius: "8px" } }).showToast();
+function showToast(msg, type) {
+    if(typeof Toastify !== 'undefined') Toastify({text: msg, duration: 3000, style: {background: type=='error'?'#ef4444':'#10b981'}}).showToast();
 }
