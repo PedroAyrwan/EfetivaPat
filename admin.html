@@ -2,7 +2,7 @@
 <html class="light" lang="pt-BR">
 <head>
     <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
     <title>Efetiva Patrimônio - Admin</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -27,7 +27,6 @@
 
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#136dec">
-    
     <link rel="apple-touch-icon" href="icons/icon.png?v=2">
 
     <script>
@@ -46,17 +45,17 @@
     <div class="blob blob-top"></div>
     <div class="blob blob-bottom"></div>
 
-    <header class="h-16 glass bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/50 flex items-center px-4 sm:px-6 z-20 shrink-0 gap-3 sticky top-0 backdrop-blur-md justify-between">
+    <header class="h-16 glass bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/50 flex items-center px-3 sm:px-6 z-20 shrink-0 gap-2 sm:gap-3 sticky top-0 backdrop-blur-md justify-between">
         
-        <div class="flex items-center gap-3 shrink-0">
+        <div class="flex items-center gap-2 shrink-0">
             <button id="btnVoltar" class="p-2 -ml-2 text-slate-500 hover:text-primary hover:bg-slate-100 rounded-full transition-colors" title="Sair / Voltar">
-                <span class="material-symbols-outlined block">arrow_back</span>
+                <span class="material-symbols-outlined block text-[20px] sm:text-[24px]">arrow_back</span>
             </button>
             
-            <div class="h-6 w-px bg-slate-300 mx-1 hidden sm:block"></div>
+            <div class="h-5 w-px bg-slate-300 mx-0.5 hidden sm:block"></div>
             
-            <div class="flex items-center gap-3">
-                <div class="size-9 flex items-center justify-center">
+            <div class="flex items-center gap-2">
+                <div class="size-8 sm:size-9 flex items-center justify-center">
                     <img src="imagem/logo.png" alt="Logo" class="w-full h-full object-contain">
                 </div>
                 <div class="flex flex-col hidden md:flex">
@@ -66,12 +65,12 @@
             </div>
         </div>
 
-        <div class="flex-1 max-w-lg mx-4 relative group hidden sm:block">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span class="material-symbols-outlined text-slate-400 group-focus-within:text-primary transition-colors text-[20px]">search</span>
+        <div class="flex-1 mx-2 sm:mx-4 relative group max-w-lg">
+            <div class="absolute inset-y-0 left-0 pl-2.5 sm:pl-3 flex items-center pointer-events-none">
+                <span class="material-symbols-outlined text-slate-400 group-focus-within:text-primary transition-colors text-[18px] sm:text-[20px]">search</span>
             </div>
-            <input type="text" id="searchInput" placeholder="Buscar usuário..." 
-                class="block w-full pl-10 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-full leading-5 bg-slate-100/50 dark:bg-slate-800/50 placeholder-slate-400 focus:outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary sm:text-sm transition-all shadow-sm">
+            <input type="text" id="searchInput" placeholder="Buscar..." 
+                class="block w-full pl-8 sm:pl-10 pr-3 py-1.5 sm:py-2 border border-slate-200 dark:border-slate-700 rounded-full leading-5 bg-slate-100/50 dark:bg-slate-800/50 placeholder-slate-400 focus:outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs sm:text-sm transition-all shadow-sm">
         </div>
 
         <div class="flex items-center gap-2 shrink-0">
@@ -85,10 +84,11 @@
                 </select>
             </div>
 
-            <button onclick="window.location.href='novo_cadrastro.html'" class="bg-primary hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-95">
-                <span class="material-symbols-outlined text-[20px]">add</span>
+            <button onclick="window.location.href='novo_cadrastro.html'" class="bg-primary hover:bg-blue-600 text-white px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg transition-all active:scale-95">
+                <span class="material-symbols-outlined text-[18px] sm:text-[20px]">add</span>
                 <span class="hidden lg:inline">Novo Usuário</span> 
-                <span class="lg:hidden">Novo</span> </button>
+                <span class="lg:hidden">Novo</span> 
+            </button>
         </div>
 
     </header>
@@ -96,67 +96,59 @@
     <div class="flex flex-1 overflow-hidden relative">
         <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent">
             
-            <div class="sm:hidden px-4 pt-4 pb-2">
-                <div class="relative">
-                    <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[20px]">search</span>
-                    <input type="text" id="searchInputMobile" oninput="document.getElementById('searchInput').value = this.value; filterUsers();" 
-                    placeholder="Buscar usuário..." class="block w-full rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-2.5 pl-10 text-sm shadow-sm focus:border-primary focus:ring-primary">
-                </div>
-            </div>
-
-            <div class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 scroll-smooth">
-                <div class="w-full max-w-7xl mx-auto flex flex-col gap-6">
+            <div class="flex-1 overflow-y-auto px-3 sm:px-6 py-4 sm:py-6 scroll-smooth">
+                <div class="w-full max-w-7xl mx-auto flex flex-col gap-4 sm:gap-6">
                     
-                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 w-full">
+                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 w-full">
                         
-                        <div class="glass bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl shadow-sm flex items-center gap-3 border border-white/50">
-                            <div class="p-2 bg-blue-100 text-blue-600 rounded-lg shrink-0">
-                                <span class="material-symbols-outlined text-[20px]">group</span>
+                        <div class="glass bg-white/60 dark:bg-slate-800/60 p-2 sm:p-3 rounded-xl shadow-sm flex items-center gap-2 sm:gap-3 border border-white/50">
+                            <div class="p-1.5 sm:p-2 bg-blue-100 text-blue-600 rounded-lg shrink-0">
+                                <span class="material-symbols-outlined text-[18px] sm:text-[20px]">group</span>
                             </div>
                             <div class="min-w-0">
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate">Total</p>
-                                <p id="totalCount" class="text-lg font-bold text-slate-800 dark:text-white leading-none">...</p>
+                                <p class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate">Total</p>
+                                <p id="totalCount" class="text-base sm:text-lg font-bold text-slate-800 dark:text-white leading-none">...</p>
                             </div>
                         </div>
 
-                        <div class="glass bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl shadow-sm flex items-center gap-3 border border-white/50">
-                            <div class="p-2 bg-purple-100 text-purple-600 rounded-lg shrink-0">
-                                <span class="material-symbols-outlined text-[20px]">shield_person</span>
+                        <div class="glass bg-white/60 dark:bg-slate-800/60 p-2 sm:p-3 rounded-xl shadow-sm flex items-center gap-2 sm:gap-3 border border-white/50">
+                            <div class="p-1.5 sm:p-2 bg-purple-100 text-purple-600 rounded-lg shrink-0">
+                                <span class="material-symbols-outlined text-[18px] sm:text-[20px]">shield_person</span>
                             </div>
                             <div class="min-w-0">
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate">Admins</p>
-                                <p id="adminCount" class="text-lg font-bold text-slate-800 dark:text-white leading-none">...</p>
+                                <p class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate">Admins</p>
+                                <p id="adminCount" class="text-base sm:text-lg font-bold text-slate-800 dark:text-white leading-none">...</p>
                             </div>
                         </div>
 
-                        <div class="glass bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl shadow-sm flex items-center gap-3 border border-white/50">
-                            <div class="p-2 bg-yellow-100 text-yellow-600 rounded-lg shrink-0">
-                                <span class="material-symbols-outlined text-[20px]">domain</span>
+                        <div class="glass bg-white/60 dark:bg-slate-800/60 p-2 sm:p-3 rounded-xl shadow-sm flex items-center gap-2 sm:gap-3 border border-white/50">
+                            <div class="p-1.5 sm:p-2 bg-yellow-100 text-yellow-600 rounded-lg shrink-0">
+                                <span class="material-symbols-outlined text-[18px] sm:text-[20px]">domain</span>
                             </div>
                             <div class="min-w-0">
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate">Clientes</p>
-                                <p id="clientCount" class="text-lg font-bold text-slate-800 dark:text-white leading-none">...</p>
+                                <p class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate">Clientes</p>
+                                <p id="clientCount" class="text-base sm:text-lg font-bold text-slate-800 dark:text-white leading-none">...</p>
                             </div>
                         </div>
 
-                        <div class="glass bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl shadow-sm flex items-center gap-3 border border-white/50">
-                            <div class="p-2 bg-green-100 text-green-600 rounded-lg shrink-0">
-                                <span class="material-symbols-outlined text-[20px]">badge</span>
+                        <div class="glass bg-white/60 dark:bg-slate-800/60 p-2 sm:p-3 rounded-xl shadow-sm flex items-center gap-2 sm:gap-3 border border-white/50">
+                            <div class="p-1.5 sm:p-2 bg-green-100 text-green-600 rounded-lg shrink-0">
+                                <span class="material-symbols-outlined text-[18px] sm:text-[20px]">badge</span>
                             </div>
                             <div class="min-w-0">
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate">Func.</p>
-                                <p id="employeeCount" class="text-lg font-bold text-slate-800 dark:text-white leading-none">...</p>
+                                <p class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate">Func.</p>
+                                <p id="employeeCount" class="text-base sm:text-lg font-bold text-slate-800 dark:text-white leading-none">...</p>
                             </div>
                         </div>
 
-                        <div class="glass bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl shadow-sm flex items-center gap-3 border border-white/50 col-span-2 lg:col-span-1">
-                            <div class="p-2 bg-red-100 text-red-600 rounded-lg shrink-0">
-                                <span class="material-symbols-outlined text-[20px]">cloud_queue</span>
+                        <div class="glass bg-white/60 dark:bg-slate-800/60 p-2 sm:p-3 rounded-xl shadow-sm flex items-center gap-2 sm:gap-3 border border-white/50 col-span-2 lg:col-span-1">
+                            <div class="p-1.5 sm:p-2 bg-red-100 text-red-600 rounded-lg shrink-0">
+                                <span class="material-symbols-outlined text-[18px] sm:text-[20px]">cloud_queue</span>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Disco</p>
+                                <p class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wide">Disco</p>
                                 <div class="flex items-center justify-between">
-                                    <p id="storagePercent" class="text-lg font-bold text-slate-800 dark:text-white leading-none">0%</p>
+                                    <p id="storagePercent" class="text-base sm:text-lg font-bold text-slate-800 dark:text-white leading-none">0%</p>
                                     <span id="storageUsed" class="text-[9px] text-slate-500 font-medium bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded ml-2 truncate">...</span>
                                 </div>
                             </div>
@@ -169,15 +161,15 @@
                             <table class="w-full text-left border-collapse min-w-[300px]">
                                 <thead>
                                     <tr class="border-b border-slate-200 bg-slate-50/80 text-slate-600 dark:text-slate-400 dark:border-slate-700">
-                                        <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider">Usuário</th>
+                                        <th class="py-2 px-3 sm:py-3 sm:px-4 text-[10px] sm:text-xs font-bold uppercase tracking-wider">Usuário</th>
                                         
-                                        <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider hidden sm:table-cell">E-mail</th>
+                                        <th class="py-2 px-3 sm:py-3 sm:px-4 text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden sm:table-cell">E-mail</th>
                                         
-                                        <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider hidden md:table-cell">Acesso</th>
+                                        <th class="py-2 px-3 sm:py-3 sm:px-4 text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:table-cell">Acesso</th>
                                         
-                                        <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider hidden lg:table-cell">Disco</th>
+                                        <th class="py-2 px-3 sm:py-3 sm:px-4 text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden lg:table-cell">Disco</th>
                                         
-                                        <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider text-right">Ações</th>
+                                        <th class="py-2 px-3 sm:py-3 sm:px-4 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-right">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="usersTableBody" class="divide-y divide-slate-100 dark:divide-slate-700/50">
