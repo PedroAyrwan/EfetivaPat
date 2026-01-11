@@ -1,5 +1,5 @@
 // ==========================================
-// ARQUIVO: admin_repo_logic.js (Versão v6 - Com Levantamento)
+// ARQUIVO: admin_repo_logic.js (Versão v7 - Com Levantamento e Renomeação Automática)
 // ==========================================
 
 const BUCKET_NAME = 'arquivo_clientes'; 
@@ -11,7 +11,7 @@ let currentPath = "";
 // 1. INICIALIZAÇÃO
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log(">>> GERENCIADOR INICIADO.");
+    console.log(">>> GERENCIADOR INICIADO v7.");
     setTimeout(initSystem, 100);
 });
 
@@ -41,7 +41,7 @@ async function initSystem() {
 
     await loadClientInfo();
     
-    // --- NOVO: Checa se já existe levantamento para ativar o botão ---
+    // Checa se já existe levantamento para ativar o botão
     await checkLevantamentoStatus();
     
     await listFiles();
@@ -60,17 +60,15 @@ async function loadClientInfo() {
 }
 
 // ==========================================
-// LÓGICA DO LEVANTAMENTO PATRIMONIAL (NOVO)
+// LÓGICA DO LEVANTAMENTO PATRIMONIAL (ATUALIZADO)
 // ==========================================
 
 async function checkLevantamentoStatus() {
     const toggle = document.getElementById('toggleLevantamento');
     const btn = document.getElementById('btnOpenLevantamento');
     
-    // Verifica se existe algo na pasta "Levantamento" desse cliente
+    // Verifica se existe a pasta raiz "Levantamento"
     const { data } = await supabaseClient.storage.from(BUCKET_NAME).list(`${targetClientId}/Levantamento`);
-    
-    // Se data tem length > 0, significa que a pasta existe
     const exists = data && data.length > 0;
     
     if(toggle) toggle.checked = exists;
@@ -86,32 +84,33 @@ async function handleLevantamentoToggle() {
     const btn = document.getElementById('btnOpenLevantamento');
     
     if (toggle.checked) {
-        // ATIVAR: Cria a pasta "Levantamento" automaticamente
-        showToast("Criando sistema de Levantamento...", "info");
+        // ATIVAR: Cria a pasta "Levantamento" E a subpasta "fotos"
+        showToast("Criando estrutura de Levantamento...", "info");
         
-        const path = `${targetClientId}/Levantamento/.emptyFolderPlaceholder`;
+        // Caminho para criar a pasta fotos diretamente (o Supabase cria os pais automaticamente)
+        const pathFotos = `${targetClientId}/Levantamento/fotos/.emptyFolderPlaceholder`;
+        
         const { error } = await supabaseClient.storage
             .from(BUCKET_NAME)
-            .upload(path, new Blob(['']), { upsert: true });
+            .upload(pathFotos, new Blob(['']), { upsert: true });
 
         if (error) {
-            showToast("Erro ao criar pasta.", "error");
-            toggle.checked = false; // Desliga se deu erro
+            showToast("Erro ao criar pastas.", "error");
+            toggle.checked = false;
         } else {
-            showToast("Levantamento Ativado!", "success");
+            showToast("Levantamento Ativado! Pasta 'fotos' criada.", "success");
             btn.classList.remove('hidden');
-            // Se estivermos na raiz, atualiza a lista para mostrar a nova pasta
+            // Se estivermos na raiz, atualiza a lista
             if(currentPath === "") listFiles();
         }
     } else {
-        // DESATIVAR: Apenas esconde o botão (Não apaga os arquivos por segurança)
+        // DESATIVAR
         btn.classList.add('hidden');
         showToast("Atalho desativado (Arquivos mantidos).", "info");
     }
 }
 
 function goToLevantamento() {
-    // Redireciona passando o ID do cliente
     window.location.href = `levantamento.html?id=${targetClientId}`;
 }
 
@@ -121,6 +120,11 @@ function goToLevantamento() {
 async function listFiles() {
     const listBody = document.getElementById('filesListBody');
     if (!listBody) return;
+    
+    // Remove skeleton hardcoded se existir no HTML original e poe spinner
+    const skeleton = document.getElementById('skeleton-loader-1');
+    if(skeleton) skeleton.parentElement.innerHTML = '';
+    
     listBody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-slate-400"><span class="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span><p class="mt-2 text-xs">Carregando...</p></td></tr>`;
 
     const fullPath = currentPath ? `${targetClientId}/${currentPath}` : `${targetClientId}`;
@@ -140,7 +144,7 @@ async function listFiles() {
         const validItems = data ? data.filter(i => i.name !== '.emptyFolderPlaceholder' && i.name !== '.keep') : [];
 
         if (validItems.length === 0) {
-            listBody.innerHTML += `<tr><td colspan="4" class="text-center py-12 text-slate-400 dark:text-slate-500">Pasta vazia.</td></tr>`;
+            listBody.innerHTML += `<tr><td colspan="4" class="text-center py-12 text-slate-400 dark:text-slate-500 flex flex-col items-center justify-center"><span class="material-symbols-outlined text-4xl mb-2 opacity-30">folder_open</span>Pasta vazia.</td></tr>`;
             return;
         }
 
@@ -150,8 +154,8 @@ async function listFiles() {
             const sizeText = isFolder ? '-' : formatBytes(item.metadata.size);
             const dateText = item.created_at ? new Date(item.created_at).toLocaleDateString() : '-';
             
-            // Destaque visual para a pasta Levantamento
-            const isSystemFolder = isFolder && item.name === 'Levantamento';
+            // Destaque para pastas do sistema
+            const isSystemFolder = isFolder && (item.name === 'Levantamento' || item.name === 'fotos');
             const rowClass = isSystemFolder ? "bg-indigo-50/60 dark:bg-indigo-900/10 border-indigo-100" : "";
             const badge = isSystemFolder ? '<span class="ml-2 text-[9px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200 uppercase tracking-wide">Sistema</span>' : '';
 
@@ -182,33 +186,89 @@ async function listFiles() {
 
     } catch (err) {
         console.error("Erro listagem:", err);
-        listBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red-500">Erro ao carregar.</td></tr>`;
+        listBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red-500">Erro ao carregar lista.</td></tr>`;
     }
 }
 
 // ==========================================
-// 3. UPLOAD
+// 3. UPLOAD (COM RENOMEAÇÃO INTELIGENTE)
 // ==========================================
 async function handleFiles(files) {
     if (!files || files.length === 0) return;
-    showToast(`Enviando ${files.length} itens...`, "info");
+    showToast(`Processando ${files.length} itens...`, "info");
 
     for (const file of files) {
         let relativePath = file.webkitRelativePath || file.name;
         if (relativePath.startsWith('/')) relativePath = relativePath.slice(1);
-        await uploadFile(file, relativePath);
+        
+        // LÓGICA DE RENOMEAÇÃO PARA LEVANTAMENTO
+        let fileToUpload = file;
+        let finalPath = relativePath;
+
+        // Verifica se estamos na pasta 'fotos' dentro de 'Levantamento'
+        if (currentPath.includes('Levantamento/fotos')) {
+            // Pergunta dados ao usuário para renomear
+            const renameData = await promptForLevantamentoRename(file.name);
+            
+            if (renameData) {
+                // Cria um novo arquivo com o novo nome
+                const newName = renameData.newName;
+                const blob = file.slice(0, file.size, file.type); 
+                fileToUpload = new File([blob], newName, { type: file.type });
+                finalPath = newName; // Atualiza o caminho
+                showToast(`Renomeado para: ${newName}`, "success");
+            } else {
+                showToast("Upload cancelado ou nome mantido.", "info");
+                if (renameData === null) continue; // Usuário clicou em cancelar no prompt, pula arquivo
+            }
+        }
+
+        await uploadFile(fileToUpload, finalPath);
     }
 
-    showToast("Envio finalizado!", "success");
+    showToast("Processo finalizado!", "success");
     listFiles();
     
     if(document.getElementById('fileElem')) document.getElementById('fileElem').value = '';
     if(document.getElementById('folderInput')) document.getElementById('folderInput').value = '';
 }
 
+// Função Auxiliar para Perguntar Nome e Número
+async function promptForLevantamentoRename(originalName) {
+    // Pequeno delay para UI respirar
+    await new Promise(r => setTimeout(r, 100));
+
+    const itemName = prompt(`Arquivo: ${originalName}\n\nQual o NOME do Item? (ex: cadeira)\nDeixe vazio para não renomear.`);
+    if (itemName === null) return null; // Cancelou
+    if (itemName.trim() === "") return false; // Não quis renomear
+
+    const itemNum = prompt(`Qual o NÚMERO do Item? (ex: 03)`);
+    if (itemNum === null) return null; 
+
+    const isItemPhoto = confirm(`Esta é a foto do ITEM (${itemName})?\n\n[OK] = Sim, é a foto do Item\n[CANCELAR] = Não, é a foto do Número`);
+    
+    // Normaliza strings (remove acentos e espaços)
+    const safeItemName = itemName.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "_");
+    const safeItemNum = itemNum.trim().replace(/[^0-9]/g, "");
+    const ext = originalName.split('.').pop();
+
+    let newFileName = "";
+    
+    if (isItemPhoto) {
+        // Regra: foto do item como "foto cadeira"
+        newFileName = `foto_${safeItemName}.${ext}`;
+    } else {
+        // Regra: foto do numero como "foto numero 03"
+        newFileName = `foto_numero_${safeItemNum}.${ext}`;
+    }
+
+    return { newName: newFileName };
+}
+
 function handleFolderSelect(event) { handleFiles(event.target.files); }
 
 async function uploadFile(file, relativePath) {
+    // Normalização padrão para outros casos
     const cleanPath = relativePath.split('/').map(p => 
         p.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, '_') 
     ).join('/');
@@ -217,10 +277,11 @@ async function uploadFile(file, relativePath) {
     const pid = 'prog-' + Math.random().toString(36).substr(2, 9);
     
     if (container) {
+        container.classList.remove('hidden');
         container.insertAdjacentHTML('afterbegin', `
-            <div id="${pid}" class="bg-white dark:bg-slate-800 p-2 rounded border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3 text-xs">
+            <div id="${pid}" class="bg-white dark:bg-slate-800 p-2 rounded border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3 text-xs mb-2">
                 <span class="material-symbols-outlined text-primary text-sm animate-spin">sync</span>
-                <span class="truncate flex-1">${cleanPath}</span>
+                <span class="truncate flex-1 font-mono">${cleanPath}</span>
             </div>
         `);
     }
@@ -228,6 +289,8 @@ async function uploadFile(file, relativePath) {
 
     try {
         const fullPath = `${targetClientId}/${currentPath}${cleanPath}`.replace(/\/+/g, '/');
+        
+        // Upload para o Supabase
         const { error } = await supabaseClient.storage.from(BUCKET_NAME).upload(fullPath, file, { cacheControl: '3600', upsert: false });
 
         if (error) {
@@ -239,7 +302,10 @@ async function uploadFile(file, relativePath) {
             }
             throw error;
         }
-        if(item) item.remove();
+        if(item) {
+            item.innerHTML = `<span class="material-symbols-outlined text-green-500 text-sm">check_circle</span> <span class="truncate flex-1 text-slate-600">${cleanPath}</span>`;
+            setTimeout(() => item.remove(), 2000);
+        }
 
     } catch (err) {
         console.error(err);
@@ -283,6 +349,7 @@ async function deleteItem(name, isFolder) {
                 const paths = files.map(f => `${basePath}/${f.name}`);
                 await supabaseClient.storage.from(BUCKET_NAME).remove(paths);
             }
+            // Tenta remover placeholder se existir
             await supabaseClient.storage.from(BUCKET_NAME).remove([`${basePath}/.emptyFolderPlaceholder`]);
         } else {
             await supabaseClient.storage.from(BUCKET_NAME).remove([basePath]);
@@ -298,15 +365,15 @@ function goHome() { currentPath = ""; listFiles(); updateBreadcrumb(); }
 
 function updateBreadcrumb() {
     const el = document.getElementById('pathBreadcrumb');
-    if(el) el.innerHTML = !currentPath ? `<span class="material-symbols-outlined text-[18px] align-middle">home</span> Início` : `<span onclick="goHome()" class="cursor-pointer hover:underline">Início</span> <span class="text-slate-300 mx-1">/</span> ${currentPath.replaceAll('/', ' / ').slice(0, -3)}`;
+    if(el) el.innerHTML = !currentPath ? `<span class="material-symbols-outlined text-[18px] align-middle">home</span> Início` : `<span onclick="goHome()" class="cursor-pointer hover:underline flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">home</span>Início</span> <span class="text-slate-300 mx-1">/</span> ${currentPath.replaceAll('/', ' <span class="text-slate-300">/</span> ').slice(0, -32)}`;
 }
 
 function setupDragAndDrop() {
     const dropArea = document.getElementById('drop-area');
     if(!dropArea) return;
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => { dropArea.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); }, false); });
-    ['dragenter', 'dragover'].forEach(() => dropArea.classList.add('bg-blue-50', 'border-primary'));
-    ['dragleave', 'drop'].forEach(() => dropArea.classList.remove('bg-blue-50', 'border-primary'));
+    ['dragenter', 'dragover'].forEach(() => dropArea.classList.add('dragover'));
+    ['dragleave', 'drop'].forEach(() => dropArea.classList.remove('dragover'));
     dropArea.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
 }
 
@@ -314,8 +381,9 @@ function getFileIcon(name) {
     const ext = name.split('.').pop().toLowerCase();
     if (['pdf'].includes(ext)) return { icon: 'picture_as_pdf', color: 'text-red-500' };
     if (['doc', 'docx', 'txt'].includes(ext)) return { icon: 'article', color: 'text-blue-600' };
-    if (['xls', 'xlsx'].includes(ext)) return { icon: 'table_view', color: 'text-green-600' };
-    if (['jpg', 'png', 'jpeg'].includes(ext)) return { icon: 'image', color: 'text-purple-500' };
+    if (['xls', 'xlsx', 'csv'].includes(ext)) return { icon: 'table_view', color: 'text-green-600' };
+    if (['jpg', 'png', 'jpeg', 'webp', 'svg'].includes(ext)) return { icon: 'image', color: 'text-purple-500' };
+    if (['zip', 'rar'].includes(ext)) return { icon: 'folder_zip', color: 'text-orange-500' };
     return { icon: 'description', color: 'text-slate-400' };
 }
 
@@ -327,5 +395,5 @@ function formatBytes(bytes) {
 
 function showToast(msg, type="info") {
     const bg = type === 'error' ? "#ef4444" : (type === 'success' ? "#10b981" : "#136dec");
-    if (typeof Toastify !== 'undefined') Toastify({ text: msg, duration: 3000, gravity: "top", position: "right", style: { background: bg, borderRadius: "8px" } }).showToast();
+    if (typeof Toastify !== 'undefined') Toastify({ text: msg, duration: 3000, gravity: "top", position: "right", style: { background: bg, borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" } }).showToast();
 }
