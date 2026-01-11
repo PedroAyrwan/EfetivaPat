@@ -1,5 +1,5 @@
 // ==========================================
-// ARQUIVO: admin_repo_logic.js (Versão v9 - Redirecionamento Automático de Fotos)
+// ARQUIVO: admin_repo_logic.js (Versão v10 - Lógica "Força Bruta")
 // ==========================================
 
 const BUCKET_NAME = 'arquivo_clientes'; 
@@ -11,14 +11,13 @@ let currentPath = "";
 // 1. INICIALIZAÇÃO
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log(">>> GERENCIADOR v9 INICIADO.");
+    console.log(">>> GERENCIADOR v10 (FORÇA BRUTA) INICIADO.");
     setTimeout(initSystem, 100);
 });
 
 async function initSystem() {
     if (typeof supabaseClient === 'undefined') {
-        alert("Erro Crítico: config.js não carregou.");
-        return;
+        alert("Erro: config.js não carregou."); return;
     }
 
     // Verifica Sessão
@@ -31,11 +30,9 @@ async function initSystem() {
         alert("Acesso Negado."); window.location.href = "repositorio_cliente.html"; return; 
     }
 
-    // Verifica ID Cliente
+    // Verifica Cliente
     if (!targetClientId) {
-        showToast("Erro: ID do cliente não informado.", "error");
-        setTimeout(() => window.location.href = "admin.html", 2000);
-        return;
+        showToast("Erro: ID do cliente ausente.", "error"); return;
     }
 
     await loadClientInfo();
@@ -58,7 +55,6 @@ async function loadClientInfo() {
 // ==========================================
 // 2. LÓGICA DO LEVANTAMENTO
 // ==========================================
-
 async function checkLevantamentoStatus() {
     const toggle = document.getElementById('toggleLevantamento');
     const btn = document.getElementById('btnOpenLevantamento');
@@ -67,10 +63,7 @@ async function checkLevantamentoStatus() {
     const exists = data && data.length > 0;
     
     if(toggle) toggle.checked = exists;
-    
-    if(btn) {
-        exists ? btn.classList.remove('hidden') : btn.classList.add('hidden');
-    }
+    if(btn) exists ? btn.classList.remove('hidden') : btn.classList.add('hidden');
 }
 
 async function handleLevantamentoToggle() {
@@ -78,13 +71,11 @@ async function handleLevantamentoToggle() {
     const btn = document.getElementById('btnOpenLevantamento');
     
     if (toggle.checked) {
-        showToast("Criando estrutura...", "info");
-        // Cria Levantamento E a subpasta fotos
+        showToast("Criando estrutura de Levantamento...", "info");
+        // Garante criação da pasta fotos
         const pathFotos = `${targetClientId}/Levantamento/fotos/.emptyFolderPlaceholder`;
         
-        const { error } = await supabaseClient.storage
-            .from(BUCKET_NAME)
-            .upload(pathFotos, new Blob(['']), { upsert: true });
+        const { error } = await supabaseClient.storage.from(BUCKET_NAME).upload(pathFotos, new Blob(['']), { upsert: true });
 
         if (error) {
             showToast("Erro ao criar pastas.", "error");
@@ -104,24 +95,8 @@ function goToLevantamento() {
     window.location.href = `levantamento.html?id=${targetClientId}`;
 }
 
-async function deleteOldSpreadsheets(folderPath) {
-    const fullPath = `${targetClientId}/${folderPath}`;
-    const { data: files } = await supabaseClient.storage.from(BUCKET_NAME).list(fullPath);
-
-    if (!files || files.length === 0) return;
-
-    // Filtra planilhas
-    const spreadsheets = files.filter(f => f.name.match(/\.(xlsx|xls|csv)$/i));
-
-    if (spreadsheets.length > 0) {
-        showToast("Substituindo planilha anterior...", "info");
-        const pathsRemoving = spreadsheets.map(f => `${fullPath}${f.name}`);
-        await supabaseClient.storage.from(BUCKET_NAME).remove(pathsRemoving);
-    }
-}
-
 // ==========================================
-// 3. LISTAGEM DE ARQUIVOS
+// 3. LISTAGEM
 // ==========================================
 async function listFiles() {
     const listBody = document.getElementById('filesListBody');
@@ -159,12 +134,12 @@ async function listFiles() {
             const sizeText = isFolder ? '-' : formatBytes(item.metadata.size);
             const dateText = item.created_at ? new Date(item.created_at).toLocaleDateString() : '-';
             
+            // Highlight pastas de sistema
             const isSystemFolder = isFolder && (item.name === 'Levantamento' || item.name === 'fotos');
             const rowClass = isSystemFolder ? "bg-indigo-50/60 dark:bg-indigo-900/10 border-indigo-100" : "";
             
             const tr = document.createElement('tr');
             tr.className = `hover:bg-slate-50 dark:hover:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700 transition-colors group ${rowClass}`;
-            
             if(isFolder) tr.onclick = () => enterFolder(item.name);
 
             tr.innerHTML = `
@@ -188,92 +163,97 @@ async function listFiles() {
 
     } catch (err) {
         console.error(err);
-        listBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red-500">Erro ao carregar lista.</td></tr>`;
+        listBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red-500">Erro lista.</td></tr>`;
     }
 }
 
 // ==========================================
-// 4. UPLOAD INTELIGENTE (ATUALIZADO V9)
+// 4. UPLOAD INTELIGENTE (CORRIGIDO)
 // ==========================================
 async function handleFiles(files) {
     if (!files || files.length === 0) return;
     showToast(`Processando ${files.length} itens...`, "info");
 
-    // Detecta Contexto
-    const pathStr = currentPath || "";
-    // Verifica se estamos em algum lugar dentro de "Levantamento"
-    const isLevantamentoContext = pathStr.includes('Levantamento');
-    // Verifica se JÁ estamos na pasta de fotos
-    const isAlreadyInFotos = pathStr.includes('fotos');
+    const isLevantamentoContext = currentPath.startsWith('Levantamento');
 
-    // 1. Limpeza de Planilhas (apenas se estiver na raiz do Levantamento)
-    if (isLevantamentoContext && !isAlreadyInFotos) {
-        for (const file of files) {
-            if (file.name.match(/\.(xlsx|xls|csv)$/i)) {
-                await deleteOldSpreadsheets(currentPath);
-            }
-        }
-    }
-
-    // 2. Processamento Arquivo por Arquivo
     for (const file of files) {
-        let fileToUpload = file;
+        let finalFile = file;
         let finalName = file.name;
-        let targetPath = currentPath; // Caminho padrão = onde estou
+        let forcePath = null; // Se null, usa o currentPath
 
-        // Verifica se é imagem
-        const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name);
+        const isImage = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name);
+        const isExcel = /\.(xlsx|xls|csv)$/i.test(file.name);
 
-        // REGRA DE REDIRECIONAMENTO:
-        // Se estou no Levantamento (raiz) e é uma foto, manda pra pasta 'fotos'
-        if (isLevantamentoContext && !isAlreadyInFotos && isImage) {
-            targetPath = currentPath + "fotos/"; 
-            showToast("Foto detectada -> Redirecionando para 'fotos'", "info");
-        }
-
-        // REGRA DE RENOMEAÇÃO:
-        // Se o destino final é a pasta fotos (seja por estar nela ou por redirecionamento)
-        const destinationIsFotos = targetPath.includes('fotos');
-        
-        if (destinationIsFotos && isImage) {
-            const renameData = await promptForLevantamentoRename(file.name);
+        // --- LÓGICA RIGOROSA DO LEVANTAMENTO ---
+        if (isLevantamentoContext) {
             
-            if (renameData) {
-                finalName = renameData.newName;
-                fileToUpload = new File([file], finalName, { type: file.type });
-            } else if (renameData === null) {
-                continue; // Cancelou
+            // CASO 1: É IMAGEM -> Força ir para "Levantamento/fotos/"
+            if (isImage) {
+                console.log("Detectado: Imagem em Levantamento -> Redirecionando para fotos");
+                forcePath = "Levantamento/fotos/";
+                
+                // Pergunta nome e número
+                const renameData = await promptForLevantamentoRename(file.name);
+                if (renameData) {
+                    finalName = renameData.newName;
+                    finalFile = new File([file], finalName, { type: file.type });
+                } else if (renameData === null) {
+                    // Usuário cancelou
+                    continue; 
+                }
+            }
+
+            // CASO 2: É EXCEL -> Força ir para "Levantamento/" (Raiz do levantamento)
+            else if (isExcel) {
+                console.log("Detectado: Excel em Levantamento -> Substituindo na raiz");
+                forcePath = "Levantamento/";
+                // Apaga planilhas antigas na raiz do levantamento antes de subir a nova
+                await deleteOldSpreadsheetsInLevantamentoRoot();
             }
         }
 
-        // Passamos o targetPath explicitamente
-        await uploadFile(fileToUpload, finalName, targetPath);
+        // Faz o upload (se forcePath existir, ele ignora onde o usuário está olhando)
+        await uploadFile(finalFile, finalName, forcePath);
     }
 
-    showToast("Processo finalizado!", "success");
-    // Recarrega a lista para mostrar mudanças (se a foto foi movida, ela some da vista atual se estiver na raiz)
-    listFiles();
+    showToast("Finalizado!", "success");
+    listFiles(); // Atualiza a visualização
     
+    // Limpa inputs
     if(document.getElementById('fileElem')) document.getElementById('fileElem').value = '';
 }
 
-async function promptForLevantamentoRename(originalName) {
-    const ext = originalName.split('.').pop().toLowerCase();
+// Apaga APENAS planilhas na raiz do Levantamento
+async function deleteOldSpreadsheetsInLevantamentoRoot() {
+    const rootPath = `${targetClientId}/Levantamento/`;
+    const { data: files } = await supabaseClient.storage.from(BUCKET_NAME).list(rootPath);
     
-    // Pequeno delay para UI respirar
+    if (files && files.length > 0) {
+        const spreadsheets = files.filter(f => f.name.match(/\.(xlsx|xls|csv)$/i));
+        if (spreadsheets.length > 0) {
+            showToast("Substituindo planilha antiga...", "info");
+            const paths = spreadsheets.map(f => `${rootPath}${f.name}`);
+            await supabaseClient.storage.from(BUCKET_NAME).remove(paths);
+        }
+    }
+}
+
+async function promptForLevantamentoRename(originalName) {
+    // Delay para a UI não travar
     await new Promise(r => setTimeout(r, 100));
 
-    const itemName = prompt(`IMAGEM: ${originalName}\n\nQual o NOME do Item? (ex: Cadeira)\n(Deixe vazio para manter nome original)`);
-    if (itemName === null) return null; 
-    if (itemName.trim() === "") return false; 
+    const itemName = prompt(`CONFIGURANDO FOTO: ${originalName}\n\nDigite o NOME do Item (ex: Cadeira):`);
+    if (itemName === null) return null; // Cancelar
+    if (itemName.trim() === "") return false; // Manter original
 
-    const itemNum = prompt(`Qual o NÚMERO do Item? (ex: 03)`);
+    const itemNum = prompt(`Digite o NÚMERO do Item (ex: 03):`);
     if (itemNum === null) return null; 
 
-    const isItemPhoto = confirm(`Esta é a foto do ITEM (${itemName})?\n\n[OK] = Sim, foto do Item\n[CANCELAR] = Não, foto do Número`);
+    const isItemPhoto = confirm(`Essa foto é do ITEM (${itemName})?\n\n[OK] = Sim, Foto do Item\n[CANCELAR] = Não, Foto do Número/Etiqueta`);
     
     const safeItemName = itemName.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "_");
     const safeItemNum = itemNum.trim().replace(/[^0-9]/g, "");
+    const ext = originalName.split('.').pop().toLowerCase();
 
     let newFileName = "";
     if (isItemPhoto) {
@@ -285,31 +265,36 @@ async function promptForLevantamentoRename(originalName) {
     return { newName: newFileName };
 }
 
-// Função de Upload Modificada para Aceitar Caminho Personalizado
-async function uploadFile(file, fileName, specificPath = null) {
+// Upload com opção de Override Path
+async function uploadFile(file, fileName, overridePath = null) {
+    // Se overridePath existe, usa ele. Se não, usa currentPath.
+    // .replace(/\/$/, "") remove barra no final para evitar duplicidade na concatenação
+    let pathPart = overridePath !== null ? overridePath : currentPath;
+    
+    // Garante que o path termine com / se não for vazio
+    if (pathPart && !pathPart.endsWith('/')) pathPart += '/';
+
     const cleanName = fileName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]/g, '_');
     
-    // Usa o caminho específico se fornecido, senão usa o atual
-    const folderPath = specificPath !== null ? specificPath : currentPath;
+    // Caminho completo: ID_CLIENTE / PASTA / ARQUIVO
+    const fullPath = `${targetClientId}/${pathPart}${cleanName}`.replace(/\/+/g, '/');
 
+    // UI de Progresso
     const container = document.getElementById('upload-progress-container');
     const pid = 'prog-' + Math.random().toString(36).substr(2, 9);
-    
     if (container) {
         container.classList.remove('hidden');
         container.insertAdjacentHTML('afterbegin', `
             <div id="${pid}" class="bg-white dark:bg-slate-800 p-2 rounded border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3 text-xs mb-2">
                 <span class="material-symbols-outlined text-primary text-sm animate-spin">sync</span>
                 <span class="truncate flex-1 font-mono">${cleanName}</span>
-                <span class="text-[9px] text-slate-400 bg-slate-100 px-1 rounded">${folderPath || 'raiz'}</span>
+                <span class="text-[9px] text-slate-400 bg-slate-100 px-1 rounded">${pathPart || 'Raiz'}</span>
             </div>
         `);
     }
     const item = document.getElementById(pid);
 
     try {
-        const fullPath = `${targetClientId}/${folderPath}${cleanName}`.replace(/\/+/g, '/');
-        
         const { error } = await supabaseClient.storage.from(BUCKET_NAME).upload(fullPath, file, { cacheControl: '3600', upsert: true });
 
         if (error) throw error;
@@ -320,13 +305,13 @@ async function uploadFile(file, fileName, specificPath = null) {
         }
 
     } catch (err) {
-        console.error(err);
-        if(item) { item.innerHTML = `<span class="material-symbols-outlined text-red-500 text-sm">error</span> <span class="truncate flex-1 text-red-500">Erro</span>`; }
+        console.error("Erro Upload:", err);
+        if(item) { item.innerHTML = `<span class="material-symbols-outlined text-red-500 text-sm">error</span> <span class="truncate flex-1 text-red-500">Falha</span>`; }
     }
 }
 
 // ==========================================
-// 5. UTILITÁRIOS FINAIS
+// 5. FUNÇÕES PADRÃO (CreateFolder, Delete, etc)
 // ==========================================
 async function createFolder() {
     let name = prompt("Nome da nova pasta:");
@@ -336,8 +321,7 @@ async function createFolder() {
     const path = `${targetClientId}/${currentPath}${name}/.emptyFolderPlaceholder`;
     const { error } = await supabaseClient.storage.from(BUCKET_NAME).upload(path, new Blob(['']), { upsert: true });
 
-    if (error) showToast("Erro ao criar pasta.", "error");
-    else listFiles();
+    if (error) showToast("Erro ao criar.", "error"); else listFiles();
 }
 
 async function downloadFile(name) {
@@ -345,7 +329,7 @@ async function downloadFile(name) {
     const { data } = await supabaseClient.storage.from(BUCKET_NAME).createSignedUrl(fullPath, 60, { download: true });
     if(data) {
         const a = document.createElement('a'); a.href = data.signedUrl; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-    } else { showToast("Erro link download.", "error"); }
+    } else { showToast("Erro link.", "error"); }
 }
 
 async function deleteItem(name, isFolder) {
@@ -389,7 +373,7 @@ function getFileIcon(name) {
     if (['pdf'].includes(ext)) return { icon: 'picture_as_pdf', color: 'text-red-500' };
     if (['doc', 'docx', 'txt'].includes(ext)) return { icon: 'article', color: 'text-blue-600' };
     if (['xls', 'xlsx', 'csv'].includes(ext)) return { icon: 'table_view', color: 'text-green-600' };
-    if (['jpg', 'png', 'jpeg', 'webp'].includes(ext)) return { icon: 'image', color: 'text-purple-500' };
+    if (['jpg', 'png', 'jpeg', 'webp', 'svg'].includes(ext)) return { icon: 'image', color: 'text-purple-500' };
     return { icon: 'description', color: 'text-slate-400' };
 }
 
