@@ -1,0 +1,136 @@
+/* =========================================
+   1. ESTILOS GERAIS E EFEITO VIDRO (GLASS)
+   ========================================= */
+.glass { 
+    background: rgba(255, 255, 255, 0.7); 
+    backdrop-filter: blur(10px); 
+    -webkit-backdrop-filter: blur(10px); 
+    border: 1px solid rgba(255, 255, 255, 0.5); 
+}
+
+/* Modo Escuro para o Glass */
+.dark .glass { 
+    background: rgba(15, 23, 42, 0.6); 
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+}
+
+/* =========================================
+   2. ANIMAÇÃO DE FUNDO (BLOBS)
+   ========================================= */
+.blob { 
+    position: absolute; 
+    filter: blur(80px); 
+    opacity: 0.6; 
+    z-index: -1; 
+    animation: float 10s infinite ease-in-out; 
+    border-radius: 50%;
+}
+
+.blob-top { 
+    top: -10%; 
+    left: -10%; 
+    width: 500px; 
+    height: 500px; 
+    background: #bfdbfe; /* Blue-200 */
+} 
+
+.dark .blob-top { 
+    background: #1e3a8a; /* Blue-900 */
+    opacity: 0.3; 
+}
+
+.blob-bottom { 
+    bottom: -10%; 
+    right: -10%; 
+    width: 500px; 
+    height: 500px; 
+    background: #ddd6fe; /* Violet-200 */
+}
+
+.dark .blob-bottom { 
+    background: #5b21b6; /* Violet-800 */
+    opacity: 0.3; 
+}
+
+@keyframes float { 
+    0%, 100% { transform: translate(0, 0); } 
+    50% { transform: translate(20px, 30px); } 
+}
+
+/* =========================================
+   3. SCROLLBAR PERSONALIZADA (GERAL)
+   ========================================= */
+::-webkit-scrollbar { 
+    width: 6px; 
+    height: 6px; 
+}
+
+::-webkit-scrollbar-track { 
+    background: transparent; 
+}
+
+::-webkit-scrollbar-thumb { 
+    background: #cbd5e1; /* Slate-300 */
+    border-radius: 3px; 
+}
+
+::-webkit-scrollbar-thumb:hover { 
+    background: #94a3b8; /* Slate-400 */
+}
+
+.dark ::-webkit-scrollbar-thumb { 
+    background: #334155; /* Slate-700 */
+}
+
+.dark ::-webkit-scrollbar-thumb:hover { 
+    background: #475569; /* Slate-600 */
+}
+
+/* =========================================
+   4. SCROLLBAR FINA (PARA O MODAL)
+   ========================================= */
+.custom-scrollbar::-webkit-scrollbar { 
+    width: 4px; 
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb { 
+    background: #e2e8f0; 
+    border-radius: 2px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { 
+    background: #1e293b; 
+}
+
+/* =========================================
+   5. INPUT DE ARQUIVO (FILE)
+   ========================================= */
+/* Suaviza a transição do botão de upload padrão do navegador */
+input[type="file"]::file-selector-button {
+    transition: background-color 0.2s, color 0.2s;
+    cursor: pointer;
+}
+
+/* =========================================
+   6. ANIMAÇÕES DE UTILIDADE
+   ========================================= */
+.animate-enter { 
+    animation: enter 0.3s ease-out forwards; 
+}
+
+@keyframes enter { 
+    from { 
+        opacity: 0; 
+        transform: translateY(10px); 
+    } 
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    } 
+}
+
+/* Garante que o input focus fique bonito */
+input:focus, textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(19, 109, 236, 0.2); /* Primary color opacity */
+}

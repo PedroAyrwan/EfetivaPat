@@ -7,11 +7,7 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-
-    <link rel="stylesheet" href="admin-style.css">
     
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script id="tailwind-config">
@@ -26,84 +22,157 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.5); }
+        .dark .glass { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .blob { position: absolute; filter: blur(80px); opacity: 0.6; z-index: -1; animation: float 10s infinite ease-in-out; }
+        .blob-top { top: -10%; left: -10%; width: 500px; height: 500px; background: #bfdbfe; } 
+        .dark .blob-top { background: #1e3a8a; opacity: 0.3; }
+        .blob-bottom { bottom: -10%; right: -10%; width: 500px; height: 500px; background: #ddd6fe; }
+        .dark .blob-bottom { background: #5b21b6; opacity: 0.3; }
+        @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(20px, 30px); } }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; }
+        .drop-zone { transition: all 0.2s ease; border: 2px dashed #cbd5e1; }
+        .drop-zone.dragover { border-color: #136dec; background-color: rgba(19, 109, 236, 0.05); transform: scale(1.01); }
+        .dark .drop-zone { border-color: #334155; }
+        .animate-enter { animation: enter 0.3s ease-out forwards; }
+        @keyframes enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+    <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#136dec">
+<link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('SW registrado!', reg))
+                .catch(err => console.log('Erro SW:', err));
+        });
+    }
+</script>
 </head>
 
-<body class="font-display text-slate-900 dark:text-white h-screen overflow-hidden flex flex-col">
+<body class="font-display text-slate-900 dark:text-white h-screen overflow-hidden flex flex-col bg-slate-50 dark:bg-[#0f172a] relative">
     
     <div class="blob blob-top"></div>
     <div class="blob blob-bottom"></div>
 
-    <header class="h-16 glass bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/50 flex items-center px-4 sm:px-6 z-20 shrink-0 gap-4 sticky top-0 backdrop-blur-md">
-        
-        <button onclick="window.location.href='admin.html'" class="p-2 -ml-2 text-slate-500 hover:text-primary hover:bg-slate-100 rounded-full transition-colors" title="Voltar para Dashboard">
-            <span class="material-symbols-outlined block">arrow_back</span>
-        </button>
-        
-        <div class="h-6 w-px bg-slate-300 mx-1"></div>
-        
+    <header class="h-16 glass bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/50 flex items-center px-4 sm:px-6 z-20 shrink-0 gap-4 sticky top-0 backdrop-blur-md justify-between">
         <div class="flex items-center gap-3">
-            <div class="size-10 flex items-center justify-center">
-                <img src="imagem/logo.png" alt="Logo" class="w-full h-full object-contain">
-            </div>
-            <div class="flex flex-col">
-                <h2 class="text-slate-900 dark:text-white text-lg font-bold tracking-tight leading-none">EfetivaPat</h2>
-                <span class="text-[10px] uppercase font-bold text-primary tracking-wider mt-0.5">GERENCIADOR</span>
+            <button onclick="window.location.href='admin.html'" class="p-2 -ml-2 text-slate-500 hover:text-primary hover:bg-slate-100 rounded-full transition-colors" title="Voltar para Dashboard">
+                <span class="material-symbols-outlined block">arrow_back</span>
+            </button>
+            <div class="h-6 w-px bg-slate-300 mx-1 hidden sm:block"></div>
+            <div class="flex items-center gap-3">
+                <div class="size-9 flex items-center justify-center">
+                    <img src="imagem/logo.png" alt="Logo" class="w-full h-full object-contain">
+                </div>
+                <div class="flex flex-col">
+                    <h2 class="text-slate-900 dark:text-white text-base font-bold tracking-tight leading-none">EfetivaPat</h2>
+                    <span class="text-[9px] uppercase font-bold text-primary tracking-wider mt-0.5">GERENCIADOR</span>
+                </div>
             </div>
         </div>
-
-        <div class="ml-auto flex items-center gap-3">
-            <span id="clientEmailDisplay" class="text-sm font-medium text-slate-500 hidden sm:block">Carregando cliente...</span>
+        <div class="flex items-center gap-4">
+            <div class="text-right hidden sm:block">
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gerenciando Cliente</p>
+                <p id="clientEmailDisplay" class="text-sm font-bold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">Carregando...</p>
+            </div>
+            <div class="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 border border-slate-200 dark:border-slate-700">
+                <span class="material-symbols-outlined text-lg">folder_managed</span>
+            </div>
         </div>
     </header>
 
     <div class="flex flex-1 overflow-hidden relative justify-center bg-transparent">
         <main class="flex-1 flex flex-col min-w-0 max-w-6xl w-full h-full overflow-hidden">
             
-            <div class="px-6 pt-6 pb-2 flex items-end justify-between sticky top-0 z-10 shrink-0 gap-4">
+            <div class="px-6 pt-6 pb-2 flex flex-col xl:flex-row xl:items-end justify-between sticky top-0 z-10 shrink-0 gap-4">
                 <div>
-                    <p id="pathBreadcrumb" class="text-sm text-slate-500 dark:text-slate-400 cursor-pointer hover:text-primary transition-colors font-medium" onclick="goHome()">Início</p>
-                    <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <span id="folderIconTitle" class="material-symbols-outlined text-yellow-500 text-3xl hidden">folder_open</span>
+                    <nav class="flex items-center text-sm text-slate-500 dark:text-slate-400 mb-1">
+                        <span id="pathBreadcrumb" class="cursor-pointer hover:text-primary transition-colors font-medium flex items-center gap-1" onclick="goHome()">
+                            <span class="material-symbols-outlined text-[18px]">home</span> Início
+                        </span>
+                    </nav>
+                    <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2 truncate">
                         <span id="pageTitle">Arquivos do Cliente</span>
                     </h1>
                 </div>
 
-                <button onclick="createFolder()" class="bg-white dark:bg-slate-800 text-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all hover:-translate-y-0.5 active:translate-y-0">
-                    <span class="material-symbols-outlined text-[20px] text-yellow-500">create_new_folder</span>
-                    <span class="hidden sm:inline">Nova Pasta</span>
-                </button>
+                <div class="flex flex-wrap gap-3 items-center">
+                    
+                    <div class="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm flex items-center gap-3">
+                        <label class="inline-flex items-center cursor-pointer select-none">
+                            <input type="checkbox" id="toggleLevantamento" class="sr-only peer" onchange="handleLevantamentoToggle()">
+                            <div class="relative w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                            <span class="ms-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Levantamento</span>
+                        </label>
+                        
+                        <button id="btnOpenLevantamento" onclick="goToLevantamento()" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded-md shadow animate-enter flex items-center gap-1 font-bold transition-all hover:-translate-y-0.5">
+                            <span class="material-symbols-outlined text-[16px]">open_in_new</span> ABRIR
+                        </button>
+                    </div>
+
+                    <div class="h-8 w-px bg-slate-300 mx-1 hidden xl:block"></div>
+
+                    <div class="flex gap-2">
+                        <button onclick="createFolder()" class="bg-white dark:bg-slate-800 text-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all hover:-translate-y-0.5 active:translate-y-0">
+                            <span class="material-symbols-outlined text-[20px] text-yellow-500">create_new_folder</span>
+                            <span class="hidden sm:inline">Nova Pasta</span>
+                        </button>
+                        <button onclick="window.location.reload()" class="bg-white dark:bg-slate-800 text-slate-500 hover:text-primary border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-lg shadow-sm transition-colors" title="Atualizar Lista">
+                            <span class="material-symbols-outlined text-[20px]">refresh</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="px-6 py-4 shrink-0">
-                <div id="drop-area" class="drop-zone p-8 flex flex-col items-center justify-center text-center group">
-                    <input type="file" id="fileElem" multiple class="hidden" onchange="handleFiles(this.files)">
+                <div id="drop-area" class="drop-zone bg-white/40 dark:bg-slate-800/40 rounded-xl p-6 flex flex-col items-center justify-center text-center group border-dashed">
                     
-                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-primary rounded-full mb-3 group-hover:scale-110 transition-transform">
+                    <input type="file" id="fileElem" multiple class="hidden" onchange="handleFiles(this.files)">
+                    <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden" onchange="handleFolderSelect(event)">
+                    
+                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-primary rounded-full mb-3 group-hover:scale-110 transition-transform shadow-sm">
                         <span class="material-symbols-outlined text-3xl">cloud_upload</span>
                     </div>
-                    <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
-                        <span class="text-primary font-bold hover:underline" onclick="document.getElementById('fileElem').click()">Clique para escolher</span> 
-                        ou arraste arquivos/pastas aqui
+                    
+                    <p class="text-sm font-medium text-slate-700 dark:text-slate-200 mb-4">
+                        Arraste arquivos aqui ou escolha uma opção abaixo
                     </p>
-                    <p class="text-xs text-slate-400 mt-1">Suporta múltiplos arquivos e pastas inteiras</p>
+
+                    <div class="flex gap-3">
+                        <button onclick="document.getElementById('fileElem').click()" class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition-all hover:-translate-y-0.5 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">description</span>
+                            Enviar Arquivos
+                        </button>
+                        <button onclick="document.getElementById('folderInput').click()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition-all hover:-translate-y-0.5 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">folder</span>
+                            Enviar Pasta
+                        </button>
+                    </div>
                 </div>
 
-                <div id="upload-progress-container" class="mt-4 flex flex-col gap-2 empty:hidden">
-                    </div>
+                <div id="upload-progress-container" class="mt-4 flex flex-col gap-2 empty:hidden max-h-40 overflow-y-auto pr-2 custom-scrollbar"></div>
             </div>
 
             <div class="flex-1 overflow-y-auto px-6 pb-6 scroll-smooth">
-                <div class="glass rounded-xl shadow-sm overflow-hidden min-h-[300px]">
+                <div class="glass bg-white/70 dark:bg-slate-800/70 rounded-xl shadow-sm overflow-hidden min-h-[300px] border border-white/50">
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-b border-slate-200/60 bg-slate-50/50 dark:bg-slate-800/50">
-                                <th class="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-1/2">Nome</th>
-                                <th class="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden sm:table-cell">Data</th>
-                                <th class="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">Tamanho</th>
-                                <th class="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Ações</th>
+                                <th class="py-3 px-6 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-1/2">Nome</th>
+                                <th class="py-3 px-6 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden sm:table-cell">Data</th>
+                                <th class="py-3 px-6 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">Tamanho</th>
+                                <th class="py-3 px-6 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Ações</th>
                             </tr>
                         </thead>
-                        <tbody id="filesListBody" class="divide-y divide-slate-100 dark:divide-slate-700">
+                        <tbody id="filesListBody" class="divide-y divide-slate-100 dark:divide-slate-700/50">
                             </tbody>
                     </table>
                 </div>
@@ -111,17 +180,10 @@
             </div>
         </main>
     </div>
-    <div class="mt-4 flex gap-2 justify-center">
-    <button onclick="document.getElementById('folderInput').click()" 
-            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow flex items-center gap-2">
-        <span class="material-symbols-outlined">folder_open</span>
-        Selecionar Pasta Inteira
-    </button>
-    
-    <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;" onchange="handleFolderSelect(event)">
-</div>
 
-   <script src="admin_repo_logic.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script src="config.js"></script>
+    <script src="admin_repo_logic.js?v=5"></script>
 
 </body>
 </html>
