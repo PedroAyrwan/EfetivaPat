@@ -1,8 +1,9 @@
 // ==========================================
-// ARQUIVO: sw.js (Service Worker) - Versão v4
+// ARQUIVO: sw.js (Service Worker) - Versão v5
 // ==========================================
 
-const CACHE_NAME = 'efetivapat-v4';
+// Mudei para v5 para garantir que o celular baixe o novo ícone
+const CACHE_NAME = 'efetivapat-v5';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -16,13 +17,13 @@ const ASSETS_TO_CACHE = [
   './admin_repo_logic.js',
   './levantamento.js',
   './imagem/logo.png',
-  // Agora aponta apenas para o arquivo que você tem
+  // Garante que ele salve o ícone único que está na pasta correta
   './icons/icon.png'
 ];
 
 // 1. INSTALAÇÃO
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Instalando v4...');
+  console.log('[Service Worker] Instalando v5...');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
@@ -31,13 +32,14 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// 2. ATIVAÇÃO
+// 2. ATIVAÇÃO (Limpa as versões antigas v1, v2, v3, v4...)
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Ativando v4...');
+  console.log('[Service Worker] Ativando v5...');
   event.waitUntil(
     caches.keys().then((keyList) => {
       return Promise.all(keyList.map((key) => {
         if (key !== CACHE_NAME) {
+          console.log('[Service Worker] Removendo cache antigo:', key);
           return caches.delete(key);
         }
       }));
