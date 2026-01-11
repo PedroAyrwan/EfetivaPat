@@ -22,20 +22,22 @@
             },
         }
     </script>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#136dec">
-<link rel="apple-touch-icon" href="icons/icon-192x192.png">
 
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('SW registrado!', reg))
-                .catch(err => console.log('Erro SW:', err));
-        });
-    }
-</script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#136dec">
+    <link rel="apple-touch-icon" href="icons/icon.png">
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registrado!', reg))
+                    .catch(err => console.log('Erro SW:', err));
+            });
+        }
+    </script>
 </head>
 
 <body class="font-display text-slate-900 dark:text-white h-screen overflow-hidden flex flex-col bg-slate-50 dark:bg-[#0f172a]">
@@ -43,13 +45,15 @@
     <div class="blob blob-top"></div>
     <div class="blob blob-bottom"></div>
 
-    <header class="h-16 glass bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/50 flex items-center px-4 sm:px-6 z-20 shrink-0 gap-4 sticky top-0 backdrop-blur-md justify-between">
+    <header class="h-16 glass bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/50 flex items-center px-4 sm:px-6 z-20 shrink-0 gap-3 sticky top-0 backdrop-blur-md justify-between">
         
         <div class="flex items-center gap-3 shrink-0">
             <button id="btnVoltar" class="p-2 -ml-2 text-slate-500 hover:text-primary hover:bg-slate-100 rounded-full transition-colors" title="Sair / Voltar">
                 <span class="material-symbols-outlined block">arrow_back</span>
             </button>
+            
             <div class="h-6 w-px bg-slate-300 mx-1 hidden sm:block"></div>
+            
             <div class="flex items-center gap-3">
                 <div class="size-9 flex items-center justify-center">
                     <img src="imagem/logo.png" alt="Logo" class="w-full h-full object-contain">
@@ -65,11 +69,11 @@
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <span class="material-symbols-outlined text-slate-400 group-focus-within:text-primary transition-colors text-[20px]">search</span>
             </div>
-            <input type="text" id="searchInput" placeholder="Buscar usuário por nome, email ou CPF..." 
+            <input type="text" id="searchInput" placeholder="Buscar usuário..." 
                 class="block w-full pl-10 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-full leading-5 bg-slate-100/50 dark:bg-slate-800/50 placeholder-slate-400 focus:outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary sm:text-sm transition-all shadow-sm">
         </div>
 
-        <div class="flex items-center gap-3 shrink-0">
+        <div class="flex items-center gap-2 shrink-0">
             
             <div class="hidden md:block">
                 <select id="roleFilter" class="block w-full pl-3 pr-8 py-1.5 text-xs border-slate-200 dark:border-slate-700 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-slate-800 shadow-sm cursor-pointer text-slate-600 dark:text-slate-300 font-medium">
@@ -82,8 +86,8 @@
 
             <button onclick="window.location.href='novo_cadrastro.html'" class="bg-primary hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-95">
                 <span class="material-symbols-outlined text-[20px]">add</span>
-                <span class="hidden lg:inline">Novo</span> 
-            </button>
+                <span class="hidden lg:inline">Novo Usuário</span> 
+                <span class="lg:hidden">Novo</span> </button>
         </div>
 
     </header>
@@ -91,91 +95,98 @@
     <div class="flex flex-1 overflow-hidden relative">
         <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent">
             
-            <div class="sm:hidden px-4 pt-4">
-                <input type="text" id="searchInputMobile" oninput="document.getElementById('searchInput').value = this.value; filterUsers();" placeholder="Buscar usuário..." class="block w-full rounded-lg border-slate-200 bg-white py-2 text-sm shadow-sm focus:border-primary focus:ring-primary">
+            <div class="sm:hidden px-4 pt-4 pb-2">
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[20px]">search</span>
+                    <input type="text" id="searchInputMobile" oninput="document.getElementById('searchInput').value = this.value; filterUsers();" 
+                    placeholder="Buscar usuário..." class="block w-full rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-2.5 pl-10 text-sm shadow-sm focus:border-primary focus:ring-primary">
+                </div>
             </div>
 
-            <div class="px-6 py-6 flex flex-col gap-6 sticky top-0 z-10">
+            <div class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 scroll-smooth">
                 <div class="w-full max-w-7xl mx-auto flex flex-col gap-6">
                     
-                    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 w-full">
+                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 w-full">
                         
                         <div class="glass bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl shadow-sm flex items-center gap-3 border border-white/50">
-                            <div class="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                            <div class="p-2 bg-blue-100 text-blue-600 rounded-lg shrink-0">
                                 <span class="material-symbols-outlined text-[20px]">group</span>
                             </div>
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Total</p>
+                            <div class="min-w-0">
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate">Total</p>
                                 <p id="totalCount" class="text-lg font-bold text-slate-800 dark:text-white leading-none">...</p>
                             </div>
                         </div>
 
                         <div class="glass bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl shadow-sm flex items-center gap-3 border border-white/50">
-                            <div class="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                            <div class="p-2 bg-purple-100 text-purple-600 rounded-lg shrink-0">
                                 <span class="material-symbols-outlined text-[20px]">shield_person</span>
                             </div>
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Admins</p>
+                            <div class="min-w-0">
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate">Admins</p>
                                 <p id="adminCount" class="text-lg font-bold text-slate-800 dark:text-white leading-none">...</p>
                             </div>
                         </div>
 
                         <div class="glass bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl shadow-sm flex items-center gap-3 border border-white/50">
-                            <div class="p-2 bg-yellow-100 text-yellow-600 rounded-lg">
+                            <div class="p-2 bg-yellow-100 text-yellow-600 rounded-lg shrink-0">
                                 <span class="material-symbols-outlined text-[20px]">domain</span>
                             </div>
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Clientes</p>
+                            <div class="min-w-0">
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate">Clientes</p>
                                 <p id="clientCount" class="text-lg font-bold text-slate-800 dark:text-white leading-none">...</p>
                             </div>
                         </div>
 
                         <div class="glass bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl shadow-sm flex items-center gap-3 border border-white/50">
-                            <div class="p-2 bg-green-100 text-green-600 rounded-lg">
+                            <div class="p-2 bg-green-100 text-green-600 rounded-lg shrink-0">
                                 <span class="material-symbols-outlined text-[20px]">badge</span>
                             </div>
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Func.</p>
+                            <div class="min-w-0">
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate">Func.</p>
                                 <p id="employeeCount" class="text-lg font-bold text-slate-800 dark:text-white leading-none">...</p>
                             </div>
                         </div>
 
                         <div class="glass bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl shadow-sm flex items-center gap-3 border border-white/50 col-span-2 lg:col-span-1">
-                            <div class="p-2 bg-red-100 text-red-600 rounded-lg">
+                            <div class="p-2 bg-red-100 text-red-600 rounded-lg shrink-0">
                                 <span class="material-symbols-outlined text-[20px]">cloud_queue</span>
                             </div>
-                            <div class="flex-1">
+                            <div class="flex-1 min-w-0">
                                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Disco</p>
                                 <div class="flex items-center justify-between">
                                     <p id="storagePercent" class="text-lg font-bold text-slate-800 dark:text-white leading-none">0%</p>
-                                    <span id="storageUsed" class="text-[9px] text-slate-500 font-medium bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded ml-2">...</span>
+                                    <span id="storageUsed" class="text-[9px] text-slate-500 font-medium bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded ml-2 truncate">...</span>
                                 </div>
                             </div>
                         </div>
 
                     </div>
-                </div>
-            </div>
 
-            <div class="flex-1 overflow-y-auto px-6 pb-6 scroll-smooth">
-                <div class="w-full max-w-7xl mx-auto">
                     <div class="glass bg-white/70 dark:bg-slate-800/70 table-container overflow-hidden rounded-xl border border-white/50 shadow-sm">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-slate-200 bg-slate-50/80 text-slate-600 dark:text-slate-400 dark:border-slate-700">
-                                    <th class="py-4 px-6 text-xs font-bold uppercase tracking-wider">Nome do Usuário</th>
-                                    <th class="py-4 px-6 text-xs font-bold uppercase tracking-wider hidden sm:table-cell">E-mail</th>
-                                    <th class="py-4 px-6 text-xs font-bold uppercase tracking-wider hidden md:table-cell">Acesso</th>
-                                    <th class="py-4 px-6 text-xs font-bold uppercase tracking-wider hidden lg:table-cell">Uso de Disco</th>
-                                    <th class="py-4 px-6 text-xs font-bold uppercase tracking-wider w-32 text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="usersTableBody" class="divide-y divide-slate-100 dark:divide-slate-700/50">
-                                </tbody>
-                        </table>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[300px]">
+                                <thead>
+                                    <tr class="border-b border-slate-200 bg-slate-50/80 text-slate-600 dark:text-slate-400 dark:border-slate-700">
+                                        <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider">Usuário</th>
+                                        
+                                        <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider hidden sm:table-cell">E-mail</th>
+                                        
+                                        <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider hidden md:table-cell">Acesso</th>
+                                        
+                                        <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider hidden lg:table-cell">Disco</th>
+                                        
+                                        <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTableBody" class="divide-y divide-slate-100 dark:divide-slate-700/50">
+                                    </tbody>
+                            </table>
+                        </div>
                     </div>
+                    
+                    <div class="h-10"></div>
                 </div>
-                <div class="h-10"></div>
             </div>
         </main>
     </div>
